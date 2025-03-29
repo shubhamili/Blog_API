@@ -10,6 +10,8 @@ const registerUser = async (req, res) => {
         // console.log("hello path", profilePicture);
 
 
+
+
         if ([userName, email, , password].some((field) => field?.trim() === "")) {
             return res.status(400).json({
                 success: false,
@@ -37,7 +39,7 @@ const registerUser = async (req, res) => {
             // If the upload fails, handle the error accordingly
             return res.status(400).json({
                 success: false,
-                message: "Error uploading to Cloudinary",
+                message: "Error uploading to Cloudinary or file not provided",
                 data: null,
                 error: "CloudinaryError",
             });
