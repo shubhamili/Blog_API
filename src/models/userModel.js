@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-
+import bcrypt from "bcrypt";
 const userSchema = new mongoose.Schema({
-   
+
     userName: {
         type: String,
         require: true,
@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
     },
 
     profilePicture: {
-        type: String, 
+        type: String,
     },
 
     bio: {
@@ -34,9 +34,23 @@ const userSchema = new mongoose.Schema({
     },
 
 },
- {
-    timestamps: true
+    {
+        timestamps: true
+    })
+
+
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next() // no !==>  yes  || yes no 
+    this.password = await bcrypt.hash(this.password, 8)
+    next()
 })
+
+
+userSchema.methods.isPasswordCorrect =
+    async function (password) {
+        return await bcrypt.compare(password, this.password)
+    }
+
 
 export const User = mongoose.model("User", userSchema);
 
