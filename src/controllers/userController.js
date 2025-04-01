@@ -1,6 +1,8 @@
 import { User } from "../models/userModel.js";
 import { ApiError } from "../utils.js/ApiError.js";
 import { ApiResponse } from "../utils.js/apiResponse.js";
+import jwt from "jsonwebtoken";
+import { generateToken } from "../utils.js/jwt.js";
 // import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
 
 
@@ -34,6 +36,8 @@ const registerUser = async (req, res) => {
         // }
 
 
+
+
         const user = await User.create({
             userName,
             password,
@@ -42,19 +46,46 @@ const registerUser = async (req, res) => {
             profilePicture
         })
 
+        //jwt token
+
+        const token = generateToken(user)
+        if (!token) {
+            throw new ApiError(400, "Token not generated")
+        }
+
+
+
         const createdUser = await User.findById(user._id).select("-password")
-
-
 
         if (!createdUser) {
             throw new ApiError(400, "User not created")
 
         }
 
-        return res.status(201).json(new ApiResponse(201, createdUser, "User created successfully"))
+        // const options = { httpOnly: true, secure: true }
 
+        // return res
+        //     .status(201)
+        //     .cookie("token", token, options)
+        //     .json(
+        //         new ApiResponse(
+        //             201,
+        //             createdUser,
+        //             "User Created Successfully",
+        //         ))
 
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+            maxAge: 24 * 60 * 60 * 1000, // 1 day
+        });
 
+        res.status(200).json({
+            success: true,
+            message: "user registered successful",
+            user: { id: user._id, username: user.userName, email: user.email }
+        });
 
 
     } catch (error) {
@@ -63,7 +94,6 @@ const registerUser = async (req, res) => {
 
 
 }
-
 
 const LoginUser = async (req, res) => {
     const { userName, password, email } = req.body;
@@ -77,7 +107,6 @@ const LoginUser = async (req, res) => {
 
     console.log(user);
 
-
     if (!user) {
         new ApiError(400, "cant find user with the given credencials")
     }
@@ -88,15 +117,55 @@ const LoginUser = async (req, res) => {
         new ApiError(400, "password has some problem")
     }
 
+
+    //authentication token
+    const token = generateToken(user)
+    if (!token) {
+        throw new ApiError(400, "Token not generated")
+    }
+
+
+
+
     const loggedInUser = await User.findById(user._id).select("-password")
 
-    return res.status(200).json(new ApiResponse(200, loggedInUser, "logged in"))
 
 
+    // return res
+    //     .status(200)
+    //     .cookie("token", token, { httpOnly: true, secure: true })
+    //     .json(new ApiResponse(200, loggedInUser, "logged in"))
+
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "Login successful",
+        user: { id: user._id, username: user.userName, email: user.email }
+    });
 
 }
 
+const logoutUser = async (req, res) => {
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+    });
+    res.status(200).json({
+        success: true,
+        message: "Logout successful",
+    });
+}
+
+
 export {
     registerUser,
-    LoginUser
+    LoginUser,
+    logoutUser
 }
