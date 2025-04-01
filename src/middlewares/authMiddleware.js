@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { User } from "../models/userModel.js";
 
 export const authenticateUser = (req, res, next) => {
     const token = req.cookies.token; // Get token from cookies
@@ -9,7 +10,11 @@ export const authenticateUser = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // Attach user to request
+        // console.log("decoded", decoded);
+
+        req.user = User.findById(decoded.id).select("-password");
+        // console.log("req.user", req.user);
+        
         next();
     } catch (error) {
         res.status(401).json({ message: "Invalid or expired token" });

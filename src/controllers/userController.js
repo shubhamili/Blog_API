@@ -61,17 +61,7 @@ const registerUser = async (req, res) => {
 
         }
 
-        // const options = { httpOnly: true, secure: true }
 
-        // return res
-        //     .status(201)
-        //     .cookie("token", token, options)
-        //     .json(
-        //         new ApiResponse(
-        //             201,
-        //             createdUser,
-        //             "User Created Successfully",
-        //         ))
 
         res.cookie("token", token, {
             httpOnly: true,
@@ -104,7 +94,6 @@ const LoginUser = async (req, res) => {
         $or: [{ userName }, { email }]
     })
 
-    console.log(user);
 
     if (!user) {
         new ApiError(400, "cant find user with the given credencials")
@@ -123,17 +112,10 @@ const LoginUser = async (req, res) => {
         throw new ApiError(400, "Token not generated")
     }
 
-
-
-
     const loggedInUser = await User.findById(user._id).select("-password")
-
-
-
-    // return res
-    //     .status(200)
-    //     .cookie("token", token, { httpOnly: true, secure: true })
-    //     .json(new ApiResponse(200, loggedInUser, "logged in"))
+    if (!loggedInUser) {
+        throw new ApiError(400, "User not logged in")
+    }
 
     res.cookie("token", token, {
         httpOnly: true,
@@ -151,6 +133,12 @@ const LoginUser = async (req, res) => {
 }
 
 const logoutUser = async (req, res) => {
+
+    // console.log("logout called");
+
+    // console.log(req.cookies.token);
+    // console.log(req.user);
+
     res.clearCookie("token", {
         httpOnly: true,
         secure: true,

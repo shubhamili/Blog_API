@@ -9,6 +9,6 @@ userRouter.route("/register").post(upload.single("profilePicture"), registerUser
 userRouter.route("/login").post(LoginUser)
 
 //protect routes
-userRouter.route("/logout").get(authenticateUser, logoutUser)
+userRouter.route("/logout").post(authenticateUser, logoutUser)
 
 export default userRouter;
