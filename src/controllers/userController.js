@@ -37,7 +37,6 @@ const registerUser = async (req, res) => {
 
 
 
-
         const user = await User.create({
             userName,
             password,
