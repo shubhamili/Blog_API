@@ -1,30 +1,28 @@
 import { Post } from "../models/postModel.js";
-import { ApiError } from "../utils.js/ApiError.js";
+// import { ApiError } from "../utils.js/ApiError.js";
 import { ApiResponse } from "../utils.js/apiResponse.js";
 
 const createPost = async (req, res) => {
+
     try {
 
-        const { content, postPicture } = req.body
-        const { userId } = req.user.id
-        console.log(userId);
+        const { content } = req.body
+        const userId = req.user._id
+        
+
 
         if (!userId) {
             return res.status(401).json({ message: "Unauthorized" });
         }
-
         if (!content) {
             return res.status(400).json({ message: "content field is required" });
         }
 
-        console.log("content",content);
-        
         const newPost = await Post.create({
             author: userId,
             content,
             postPicture: postPicture || null,
         })
-
         if (!newPost) {
             return res.status(400).json({ message: "Post not created" });
         }
@@ -38,8 +36,6 @@ const createPost = async (req, res) => {
             )
         )
 
-
-
     } catch (error) {
         return res.status(500).json(
             new ApiError(
@@ -48,8 +44,9 @@ const createPost = async (req, res) => {
                 error.message || "Something went wrong"
             )
         )
-
     }
 }
+
+// Get all posts
 
 export { createPost }
