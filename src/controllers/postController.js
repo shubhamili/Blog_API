@@ -8,7 +8,7 @@ const createPost = async (req, res) => {
 
         const { content } = req.body
         const userId = req.user._id
-        
+        const postPicture = req.file ? req.file.path : null
 
 
         if (!userId) {
@@ -48,5 +48,12 @@ const createPost = async (req, res) => {
 }
 
 // Get all posts
+const getAllPosts = async (req, res) => {
 
-export { createPost }
+    
+}
+
+export {
+    createPost,
+    getAllPosts,
+}
