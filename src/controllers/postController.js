@@ -116,11 +116,10 @@ const getUserPosts = async (req, res) => {
                 error.message || "Something went wrong"
             )
         )
-
     }
-
 }
 
+//user only can update his own post
 const updatePost = async (req, res, next) => {
     try {
 
@@ -174,7 +173,7 @@ const updatePost = async (req, res, next) => {
     }
 }
 
-
+//user only can delete his own post
 const deletePost = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -205,6 +204,73 @@ const deletePost = async (req, res, next) => {
 };
 
 
+const toggleLikePost = async (req, res, next) => {
+    try {
+
+        const { id } = req.params
+        const userId = req.user._id
+
+        const post = await Post.findById(id)
+        if (!post) {
+            throw new ApiError(404, "Post not found")
+        }
+
+        const Liked = post.likes.includes(userId)
+        if (Liked) {
+            post.likes = post.likes.filter(SingleId => SingleId.toString() !== userId.toString())
+        } else {
+            post.likes.push(userId)
+        }
+
+        await post.save();
+
+        return res.status(200).json(new ApiResponse(
+            200,
+            `${Liked ? "Unliked" : "Liked"} successfully`,
+            { totalLikes: post.likes.length }
+        ));
+
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+const addComment = async (req, res, next) => {
+    try {
+        const { id } = req.params; // postId
+        const userId = req.user._id;
+        const { comment } = req.body;
+
+        if (!comment) {
+            throw new ApiError(400, "Comment cannot be empty");
+        }
+
+        const post = await Post.findById(id);
+        if (!post) {
+            throw new ApiError(404, "Post not found");
+        }
+
+        const newComment = {
+            user: userId,
+            comment,
+        };
+
+        post.comments.push(newComment);
+        await post.save();
+
+        return res.status(201).json(new ApiResponse(
+            201,
+            "Comment added successfully",
+            { totalComments: post.comments.length, comment: newComment }
+        ));
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 
 
 export {
@@ -213,5 +279,7 @@ export {
     getSinglePost,
     getUserPosts,
     updatePost,
-    deletePost
+    deletePost,
+    toggleLikePost,
+    addComment,
 }
