@@ -32,6 +32,12 @@ const userSchema = new mongoose.Schema({
     bio: {
         type: String,
     },
+    role: {
+        type: String,
+        required: true,
+        enum: ["admin", "editor", "viewer"],
+        default: "viewer"
+    },
 
 },
     {

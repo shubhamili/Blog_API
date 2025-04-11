@@ -9,10 +9,10 @@ import { generateToken } from "../utils.js/jwt.js";
 const registerUser = async (req, res) => {
 
     try {
-        const { userName, Name, email, password, bio } = req.body;
+        const { userName, Name, email, password, bio, role } = req.body;
         const profilePicture = req.file ? req.file.path : null
 
-        if ([userName, email, , password].some((field) => field?.trim() === "")) {
+        if ([userName, email, , password, role].some((field) => field?.trim() === "")) {
             throw new ApiError(400, "Please fill all the fields")
         }
 
@@ -42,7 +42,9 @@ const registerUser = async (req, res) => {
             password,
             Name,
             email,
-            profilePicture
+            profilePicture,
+            bio,
+            role,
         })
 
         //jwt token
@@ -73,7 +75,7 @@ const registerUser = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "user registered successful",
-            user: { id: user._id, username: user.userName, email: user.email }
+            user: { id: user._id, username: user.userName, email: user.email, role: user.role },
         });
 
 
@@ -85,26 +87,24 @@ const registerUser = async (req, res) => {
 }
 
 const LoginUser = async (req, res) => {
-    const { userName, password, email } = req.body;
-    if ([userName, email, , password].some((field) => field?.trim() === "")) {
+    const { userName, password } = req.body;
+    if ([userName, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "all fields are required")
     }
 
-    const user = await User.findOne({
-        $or: [{ userName }, { email }]
-    })
+    const user = await User.findOne({ userName })
 
 
     if (!user) {
         new ApiError(400, "cant find user with the given credencials")
     }
 
-    const passwordVarified = await user.isPasswordCorrect(password)
-    // const isPasswordValid = await user.isPasswordCorrect(password)
+    const passwordVarified =await user.isPasswordCorrect(password)
+    console.log(passwordVarified);
+
     if (!passwordVarified) {
         new ApiError(400, "password has some problem")
     }
-
 
     //authentication token
     const token = generateToken(user)
@@ -127,7 +127,7 @@ const LoginUser = async (req, res) => {
     res.status(200).json({
         success: true,
         message: "Login successful",
-        user: { id: user._id, username: user.userName, email: user.email }
+        user: { id: user._id, username: user.userName, email: user.email, role: user.role },
     });
 
 }

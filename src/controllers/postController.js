@@ -4,17 +4,19 @@ import { Post } from "../models/postModel.js";
 import { ApiError } from "../utils.js/ApiError.js";
 import { ApiResponse } from "../utils.js/apiResponse.js";
 
-const createPost = async (req, res) => {
+const createPost = async (req, res, next) => {
 
     try {
 
         const { content } = req.body
-        const userId = req.user._id
+        const userId = req.user.id
         const postPicture = req.file ? req.file.path : null
 
 
+
+
         if (!userId) {
-            return res.status(401).json({ message: "Unauthorized" });
+            return res.status(401).json({ message: "Unauthorized userId not getting" });
         }
         if (!content) {
             return res.status(400).json({ message: "content field is required" });
@@ -25,27 +27,26 @@ const createPost = async (req, res) => {
             content,
             postPicture: postPicture || null,
         })
+
         if (!newPost) {
             return res.status(400).json({ message: "Post not created" });
         }
 
         return res.status(201).json(
             new ApiResponse(
-                true,
-                201,
-                "Post created successfully",
-                newPost
+                201,newPost,"Post created succesfully"
             )
         )
 
     } catch (error) {
-        return res.status(500).json(
-            new ApiError(
-                500,
-                "Internal server error",
-                error.message || "Something went wrong"
-            )
-        )
+        // return res.status(500).json(
+        //     new ApiError(
+        //         500,
+        //         "Internal server error",
+        //         error.message || "Something went wrong"
+        //     )
+        // )
+        next(error)
     }
 }
 
@@ -134,9 +135,9 @@ const updatePost = async (req, res, next) => {
             throw new ApiError(404, "Post not found")
         }
 
-        if (post.author.toString() !== userID.toString()) {
-            throw new ApiError(403, "you are not authorized to edit this post")
-        }
+        // if (post.author.toString() !== userID.toString()) {
+        //     throw new ApiError(403, "you are not authorized to edit this post")
+        // }
 
 
         // if (newImage && post.postPicture) {
@@ -185,9 +186,9 @@ const deletePost = async (req, res, next) => {
             throw new ApiError(404, "Post not found");
         }
 
-        if (postToBeDeleted.author.toString() !== userID.toString()) {
-            throw new ApiError(403, "Not authorized to delete this post");
-        }
+        // if (postToBeDeleted.author.toString() !== userID.toString()) {
+        //     throw new ApiError(403, "Not authorized to delete this post");
+        // }
 
         const deletedPost = await Post.deleteOne({ _id: id });
 
