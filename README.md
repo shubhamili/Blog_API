@@ -29,39 +29,6 @@ A robust, secure, and scalable backend API built using Node.js, Express, MongoDB
 
 ---
 
-## 🧑‍💻 Project Setup
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/your-username/blog-post-management.git
-cd blog-post-management
-```
-
-2. **Install dependencies**
-
-```bash
-npm install
-```
-
-3. **Configure environment**
-
-Create a `.env` file in the root directory and add:
-
-```env
-PORT=5000
-MONGO_URI=your_mongo_connection_string
-JWT_SECRET=your_jwt_secret
-```
-
-4. **Run the server**
-
-```bash
-npm run dev
-```
-
----
-
 ## 🔐 Authentication & Authorization
 
 - Users register/login and receive a JWT token.
