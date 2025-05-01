@@ -3,16 +3,14 @@ import fs from "fs";
 import { Post } from "../models/postModel.js";
 import { ApiError } from "../utils.js/ApiError.js";
 import { ApiResponse } from "../utils.js/apiResponse.js";
+import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
 
 const createPost = async (req, res, next) => {
 
     try {
-
         const { content } = req.body
         const userId = req.user.id
         const postPicture = req.file ? req.file.path : null
-
-
 
 
         if (!userId) {
@@ -22,10 +20,22 @@ const createPost = async (req, res, next) => {
             return res.status(400).json({ message: "content field is required" });
         }
 
+        if (!postPicture) {
+            throw new ApiError(401, "Post picture is not there")
+        }
+
+        const postPicCloud = await uploadOnCloudinary(postPicture)
+
+        if (!postPicCloud) {
+            throw new ApiError(401, "Problem in cloudinary uploade")
+        }
+
+
+
         const newPost = await Post.create({
             author: userId,
             content,
-            postPicture: postPicture || null,
+            postPicture: postPicCloud.secure_url || null,
         })
 
         if (!newPost) {
@@ -34,18 +44,11 @@ const createPost = async (req, res, next) => {
 
         return res.status(201).json(
             new ApiResponse(
-                201,newPost,"Post created succesfully"
+                201, newPost, "Post created succesfully"
             )
         )
 
     } catch (error) {
-        // return res.status(500).json(
-        //     new ApiError(
-        //         500,
-        //         "Internal server error",
-        //         error.message || "Something went wrong"
-        //     )
-        // )
         next(error)
     }
 }
@@ -120,51 +123,35 @@ const getUserPosts = async (req, res) => {
     }
 }
 
-//user only can update his own post
+//editor and admin can update post which is set into the routes
 const updatePost = async (req, res, next) => {
     try {
-
         const { id } = req.params
-        const userID = req.user._id
         const { content } = req.body
         const newImage = req.file ? req.file.path : null
 
         const post = await Post.findById(id);
-
         if (!post) {
             throw new ApiError(404, "Post not found")
         }
 
-        // if (post.author.toString() !== userID.toString()) {
-        //     throw new ApiError(403, "you are not authorized to edit this post")
-        // }
 
+        const updatedImgCloud = await uploadOnCloudinary(newImage);
 
-        // if (newImage && post.postPicture) {
-        //     const oldImagePath = path.join("uploads", post.postPicture);
-        //     if (fs.existsSync(oldImagePath)) {
-        //         fs.unlinkSync(oldImagePath);
-        //     }
-
-
-        const oldImagePath = post.postPicture.startsWith("uploads")
-            ? post.postPicture
-            : path.join("uploads", post.postPicture);
-
-        if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-            // console.log("Old image deleted:", oldImagePath);
-        } else {
-            console.log("Old image not found:", oldImagePath);
+        if (!updatedImgCloud) {
+            throw new ApiError(402, "Cloudinary has some problem")
         }
-
 
         if (content) {
             post.content = content;
         }
+
         if (newImage) {
-            post.postPicture = newImage
+            post.postPicture = updatedImgCloud.secure_url
+        } else {
+            throw new ApiError(401, "new image is not there")
         }
+
         const updatedPost = await post.save()
 
         return res.status(202).json(new ApiResponse(202, updatedPost, "post Updated"))
@@ -207,7 +194,6 @@ const deletePost = async (req, res, next) => {
 
 const toggleLikePost = async (req, res, next) => {
     try {
-
         const { id } = req.params
         const userId = req.user._id
 

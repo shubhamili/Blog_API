@@ -98,7 +98,7 @@ const LoginUser = async (req, res) => {
         new ApiError(400, "cant find user with the given credencials")
     }
 
-    const passwordVarified =await user.isPasswordCorrect(password)
+    const passwordVarified = await user.isPasswordCorrect(password)
     console.log(passwordVarified);
 
     if (!passwordVarified) {
@@ -148,6 +148,11 @@ const logoutUser = async (req, res) => {
         message: "Logout successful",
     });
 }
+
+const updateUserDetails = async (req, res) => {
+    
+}
+
 
 export {
     registerUser,
