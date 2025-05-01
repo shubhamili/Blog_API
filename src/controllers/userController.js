@@ -3,7 +3,7 @@ import { ApiError } from "../utils.js/ApiError.js";
 import { ApiResponse } from "../utils.js/apiResponse.js";
 import jwt from "jsonwebtoken";
 import { generateToken } from "../utils.js/jwt.js";
-// import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
+import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
 
 
 const registerUser = async (req, res) => {
@@ -16,25 +16,25 @@ const registerUser = async (req, res) => {
             throw new ApiError(400, "Please fill all the fields")
         }
 
-
         const useExistsAlready = await User.findOne({ $or: [{ userName }, { email }] })
         if (useExistsAlready) {
             throw new ApiError(400, "User already exists")
         }
-        // console.log(profilePicture);
 
-        // const cloudinaryUpload = await uploadOnCloudinary(profilePicture);
+        const cloudinaryUpload = await uploadOnCloudinary(profilePicture);
 
-        // if (!cloudinaryUpload) {
-        //     // If the upload fails, handle the error accordingly
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: "Error uploading to Cloudinary or file not provided",
-        //         data: null,
-        //         error: "CloudinaryError",
-        //     });
-        // }
+        if (!cloudinaryUpload) {
+            // If the upload fails, handle the error accordingly
+            return res.status(400).json({
+                success: false,
+                message: "Error uploading to Cloudinary or file not provided",
+                data: null,
+                error: "CloudinaryError",
+            });
+        }
 
+        // If the upload is successful, you can access the URL and other details from the response
+        const uploadedImageUrl = cloudinaryUpload.secure_url; // Use the secure URL for HTTPS
 
 
         const user = await User.create({
@@ -42,7 +42,7 @@ const registerUser = async (req, res) => {
             password,
             Name,
             email,
-            profilePicture,
+            profilePicture: uploadedImageUrl,
             bio,
             role,
         })
@@ -75,14 +75,13 @@ const registerUser = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "user registered successful",
-            user: { id: user._id, username: user.userName, email: user.email, role: user.role },
+            user: { id: user._id, username: user.userName, email: user.email, role: user.role, profilePicture: createdUser.profilePicture },
         });
 
 
     } catch (error) {
         console.error("error in controller", error)
     }
-
 
 }
 
@@ -150,9 +149,10 @@ const logoutUser = async (req, res) => {
     });
 }
 
-
 export {
     registerUser,
     LoginUser,
     logoutUser
 }
+
+// https://www.youtube.com/watch?v=MIJt9H69QVc&list=WL&index=6

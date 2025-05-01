@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema({
         enum: ["admin", "editor", "viewer"],
         default: "viewer"
     },
+    
 
 },
     {
