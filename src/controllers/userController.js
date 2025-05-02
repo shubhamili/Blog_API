@@ -12,7 +12,7 @@ const registerUser = async (req, res) => {
         const { userName, Name, email, password, bio, role } = req.body;
         const profilePicture = req.file ? req.file.path : null
 
-        if ([userName, email, , password, role].some((field) => field?.trim() === "")) {
+        if ([userName, email, , password].some((field) => field?.trim() === "")) {
             throw new ApiError(400, "Please fill all the fields")
         }
 

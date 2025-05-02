@@ -3,7 +3,7 @@ import fs from "fs";
 import { Post } from "../models/postModel.js";
 import { ApiError } from "../utils.js/ApiError.js";
 import { ApiResponse } from "../utils.js/apiResponse.js";
-import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
+import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
 
 const createPost = async (req, res, next) => {
 
@@ -31,11 +31,11 @@ const createPost = async (req, res, next) => {
         }
 
 
-
         const newPost = await Post.create({
             author: userId,
             content,
             postPicture: postPicCloud.secure_url || null,
+            postPicturePublicID: postPicCloud.public_id || null,
         })
 
         if (!newPost) {
@@ -53,29 +53,44 @@ const createPost = async (req, res, next) => {
     }
 }
 
-const getAllPosts = async (req, res) => {
+const getAllPosts = async (req, res, next) => {
+
 
     try {
-        const posts = await Post.find({}).populate("author", "name email profilePicture").sort({ createdAt: -1 })
+        let page = Number(req.query.page) || 1;
+        let limit = Number(req.query.limit) || 4;
 
-        if (!posts) {
+        if (!page || !limit) {
+            return res.status(400).json({ message: "page and limit are required" });
+        }
+        if (page < 1 || limit < 1) {
+            return res.status(400).json({ message: "page and limit should be greater than 0" });
+        }
+
+        let skip = (page - 1) * limit;
+
+        const total = await Post.countDocuments(); // ✅ Await here
+
+        const posts = await Post.find({})
+            .skip(skip)
+            .limit(limit)
+            .populate("author", "name email profilePicture")
+            .sort({ createdAt: 1 });
+
+        if (!posts || posts.length === 0) {
             return res.status(404).json({ message: "No posts found" });
         }
-        return res.status(200).json(
-            new ApiResponse(200, posts, "Posts fetched successfully")
-        )
+
+        return res.status(200).json({
+            totalPosts: total,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            postsPerPage: limit,
+            posts,
+        });
     } catch (error) {
-        return res.status(500).json(
-            new ApiError(
-                500,
-                "Internal server error",
-                error.message || "Something went wrong"
-            )
-        )
-
+        next(error);
     }
-
-
 
 
 }
@@ -135,6 +150,10 @@ const updatePost = async (req, res, next) => {
             throw new ApiError(404, "Post not found")
         }
 
+        const deleteImageCloud = await deleteImageFromCloudinary(post.postPicturePublicID)
+        if (!deleteImageCloud) {
+            console.log("Cloudinary image did not deleted");
+        }
 
         const updatedImgCloud = await uploadOnCloudinary(newImage);
 
@@ -147,10 +166,12 @@ const updatePost = async (req, res, next) => {
         }
 
         if (newImage) {
-            post.postPicture = updatedImgCloud.secure_url
+            post.postPicture = updatedImgCloud.secure_url;
+            post.postPicturePublicID = updatedImgCloud.public_id
         } else {
             throw new ApiError(401, "new image is not there")
         }
+
 
         const updatedPost = await post.save()
 

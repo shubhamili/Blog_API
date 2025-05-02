@@ -28,15 +28,16 @@ const userSchema = new mongoose.Schema({
     profilePicture: {
         type: String,
     },
-
+    profilePicturePublicID:{
+        type:String
+    },
     bio: {
         type: String,
     },
     role: {
         type: String,
-        required: true,
-        enum: ["admin", "editor", "viewer"],
-        default: "viewer"
+        enum: ["admin", "editor"],
+        default: "editor"
     },
     
 
