@@ -2,6 +2,7 @@
 # 📝 Blog Post Management API
 
 A robust, secure, and scalable backend API built using Node.js, Express, MongoDB, and Passport.js for managing blog posts, users, authentication, authorization, and interaction features like likes and comments.
+![Project Screenshot](https://res-console.cloudinary.com/dycmay6eq/thumbnails/v1/image/upload/v1746279600/U2NyZWVuc2hvdF8yMDI1LTA1LTAzXzE5MDY1MF9qZ2M1eWU=/drilldown)
 
 ---
 
