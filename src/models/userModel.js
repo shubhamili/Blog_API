@@ -28,8 +28,8 @@ const userSchema = new mongoose.Schema({
     profilePicture: {
         type: String,
     },
-    profilePicturePublicID:{
-        type:String
+    profilePicturePublicID: {
+        type: String
     },
     bio: {
         type: String,
@@ -39,7 +39,8 @@ const userSchema = new mongoose.Schema({
         enum: ["admin", "editor"],
         default: "editor"
     },
-    
+ 
+
 
 },
     {

@@ -149,15 +149,21 @@ const logoutUser = async (req, res) => {
     });
 }
 
-const updateUserDetails = async (req, res) => {
+const getUserProfile = async (req, res, next) => {
+
     
+   return res.status(200).json(
+        new ApiResponse(200, req.user, "User profile fetched successfully")
+    )
+
 }
 
 
 export {
     registerUser,
     LoginUser,
-    logoutUser
+    logoutUser,
+    getUserProfile
 }
 
 // https://www.youtube.com/watch?v=MIJt9H69QVc&list=WL&index=6

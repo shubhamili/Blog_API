@@ -55,7 +55,6 @@ const createPost = async (req, res, next) => {
 
 const getAllPosts = async (req, res, next) => {
 
-
     try {
         let page = Number(req.query.page) || 1;
         let limit = Number(req.query.limit) || 4;
@@ -278,6 +277,39 @@ const addComment = async (req, res, next) => {
     }
 };
 
+const totalPostbyEachUser = async (req, res, next) => {
+    const PostCount = await Post.aggregate([
+        {
+            $group: { _id: "$author", totalPosts: { $sum: 1 } }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "_id",
+                foreignField: "_id",
+                as: "authorDetails",
+            }
+        },
+        {
+            $unwind: "$authorDetails"
+        },
+        {
+            $project: {
+                _id: 0,
+                authorId: "$authorDetails._id",
+                authorName: "$authorDetails.userName",
+                totalPosts: 1,
+            }
+        }
+    ])
+
+    if (!PostCount) {
+        return res.status(404).json({ message: "No posts found" });
+    }
+    return res.status(200).json(
+        new ApiResponse(200, PostCount, "Post count by each user")
+    )
+}
 
 
 
@@ -290,4 +322,5 @@ export {
     deletePost,
     toggleLikePost,
     addComment,
+    totalPostbyEachUser,
 }

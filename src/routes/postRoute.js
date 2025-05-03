@@ -1,5 +1,5 @@
 import express from "express";
-import { addComment, createPost, deletePost, getAllPosts, getSinglePost, getUserPosts, toggleLikePost, updatePost } from "../controllers/postController.js";
+import { addComment, createPost, deletePost, getAllPosts, getSinglePost, getUserPosts, toggleLikePost, totalPostbyEachUser, updatePost } from "../controllers/postController.js";
 // import { authenticateUser } from "../middlewares/authMiddleware.js";
 // import passport from "passport";
 import { upload } from "../middlewares/multerMiddleware.js";
@@ -25,6 +25,8 @@ postRouter.route("/deletePost/:id").delete(authenticateUser, authorizeRoles("adm
 postRouter.route("/likePost/:id").post(authenticateUser, toggleLikePost);
 
 postRouter.route("/addComment/:id").post(authenticateUser, addComment);
+
+postRouter.route("/totalPostbyEachUser").get(totalPostbyEachUser);
 
 
 
