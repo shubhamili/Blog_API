@@ -1,7 +1,11 @@
 
 # 📝 Blog Post Management API
 
-A robust, secure, and scalable backend API built using Node.js, Express, MongoDB, and Passport.js for managing blog posts, users, authentication, authorization, and interaction features like likes and comments.
+This is a RESTful API for a blog platform where users can sign up, log in, create, update, delete, and interact with posts. It includes features like JWT authentication, role-based access control, Passport.js integration, and media upload support with Multer & Cloudinary.
+
+
+---
+## API Endpoints
 ![Project Screenshot](https://res.cloudinary.com/dycmay6eq/image/upload/v1746279831/gf1kxgdxcxvdjs482agz.png)
 
 ---
@@ -9,12 +13,14 @@ A robust, secure, and scalable backend API built using Node.js, Express, MongoDB
 ## 🚀 Features
 
 - ✅ User registration & login with JWT-based authentication
-- ✅ Role-based access control (`admin`, `editor`, `user`) using Passport.js
+- ✅ Role-based access control (`admin`, `editor`) using Passport.js
 - ✅ CRUD operations on blog posts
 - ✅ File upload for post pictures using `multer`
 - ✅ Like/unlike posts
 - ✅ Add comments to posts
 - ✅ Secure routes with Passport JWT strategy
+- ✅ Pagination for posts
+- ✅ MongoDB and Mongoose for database operations
 - ✅ Modular architecture with controllers, models, middlewares
 
 ---
@@ -26,16 +32,8 @@ A robust, secure, and scalable backend API built using Node.js, Express, MongoDB
 - **Authentication:** JWT + Passport.js
 - **Authorization:** Role-based with custom middleware
 - **File Upload:** Multer
-- **Environment Config:** dotenv
-
----
-
-## 🔐 Authentication & Authorization
-
-- Users register/login and receive a JWT token.
-- Token is sent via HTTP headers (`Authorization: Bearer <token>`) or cookies.
-- Passport verifies the token and attaches the user to `req.user`.
-- Custom middleware `authorizeRoles()` checks if the user's role allows access.
+- **Cloud Storage (Optional):** Cloudinary
+- **Environment Config:** dotenv , cookie-parser
 
 ---
 
