@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 import { generateToken } from "../utils.js/jwt.js";
 import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
 
-
 const registerUser = async (req, res) => {
 
     try {
@@ -20,21 +19,26 @@ const registerUser = async (req, res) => {
         if (useExistsAlready) {
             throw new ApiError(400, "User already exists")
         }
+        let uploadedImageUrl = "";
+        if (profilePicture) {
+            cloudinaryUpload = await uploadOnCloudinary(profilePicture);
+            if (cloudinaryUpload) {
+                // If the upload is successful, you can access the URL and other details from the response
+                uploadedImageUrl = cloudinaryUpload.secure_url; // Use the secure URL for HTTPS
 
-        const cloudinaryUpload = await uploadOnCloudinary(profilePicture);
-
-        if (!cloudinaryUpload) {
-            // If the upload fails, handle the error accordingly
-            return res.status(400).json({
-                success: false,
-                message: "Error uploading to Cloudinary or file not provided",
-                data: null,
-                error: "CloudinaryError",
-            });
+                return res.status(200).json({
+                    success: true,
+                    message: "file uploaded to Cloudinary",
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading to Cloudinary or file not provided",
+                    data: null,
+                    error: "CloudinaryError",
+                });
+            }
         }
-
-        // If the upload is successful, you can access the URL and other details from the response
-        const uploadedImageUrl = cloudinaryUpload.secure_url; // Use the secure URL for HTTPS
 
 
         const user = await User.create({
@@ -151,8 +155,8 @@ const logoutUser = async (req, res) => {
 
 const getUserProfile = async (req, res, next) => {
 
-    
-   return res.status(200).json(
+
+    return res.status(200).json(
         new ApiResponse(200, req.user, "User profile fetched successfully")
     )
 
