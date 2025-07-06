@@ -99,7 +99,10 @@ const LoginUser = async (req, res) => {
 
 
     if (!user) {
-        new ApiError(400, "cant find user with the given credencials")
+        return res.status(400).json({
+            success:false,
+            msg:"error in finding user bro"
+        })
     }
 
     const passwordVarified = await user.isPasswordCorrect(password)

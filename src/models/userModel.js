@@ -7,24 +7,19 @@ const userSchema = new mongoose.Schema({
         require: true,
         unique: true,
     },
-
     Name: {
         type: String,
     },
-
     email: {
         type: String,
         required: true,
-        unique: true,
         trim: true,
         lowercase: true,
     },
-
     password: {
         type: String,
         required: true
     },
-
     profilePicture: {
         type: String,
     },
@@ -38,10 +33,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ["admin", "editor"],
         default: "editor"
-    },
- 
-
-
+    }
 },
     {
         timestamps: true
@@ -62,5 +54,3 @@ userSchema.methods.isPasswordCorrect =
 
 
 export const User = mongoose.model("User", userSchema);
-
-
