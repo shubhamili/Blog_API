@@ -57,7 +57,7 @@ const getAllPosts = async (req, res, next) => {
 
     try {
         let page = Number(req.query.page) || 1;
-        let limit = Number(req.query.limit) || 4;
+        let limit = Number(req.query.limit) || 10;
 
         if (!page || !limit) {
             return res.status(400).json({ message: "page and limit are required" });
