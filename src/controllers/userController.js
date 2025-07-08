@@ -100,8 +100,8 @@ const LoginUser = async (req, res) => {
 
     if (!user) {
         return res.status(400).json({
-            success:false,
-            msg:"error in finding user bro"
+            success: false,
+            msg: "error in finding user bro"
         })
     }
 
@@ -123,13 +123,18 @@ const LoginUser = async (req, res) => {
         throw new ApiError(400, "User not logged in")
     }
 
+    // res.cookie("token", token, {
+    //     httpOnly: true,
+    //     secure: true,
+    //     sameSite: "strict",
+    //     maxAge: 24 * 60 * 60 * 1000, // 1 day
+    // });
     res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
-
     res.status(200).json({
         success: true,
         message: "Login successful",
@@ -156,15 +161,72 @@ const logoutUser = async (req, res) => {
     });
 }
 
+// const getUserProfile = async (req, res, next) => {
+//     if (!req.user) {
+//         return res.status(401).json({ success: false, message: "Unauthorized" });
+//     }
+
+//     const { id, userName, email, role
+//     } = req.user;
+
+//     const userNew = await User.findById(id)
+
+//     if (!userNew) {
+//         res.status(403).json({
+//             success: false,
+//             msg: "user not found"
+
+//         });
+//     }
+//     const profilePicture = userNew.profilePicture
+//     console.log("profilePicture",profilePicture);
+//     console.log("userNew",userName);
+//     res.status(200).json({
+//         success: true,
+//         user: { id, userName, email, role, profilePicture },
+//     });
+
+// }
+
 const getUserProfile = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
 
+        const { id, userName, email, role } = req.user;
 
-    return res.status(200).json(
-        new ApiResponse(200, req.user, "User profile fetched successfully")
-    )
+        const userNew = await User.findById(id);
 
-}
+        if (!userNew) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
 
+        const profilePicture = userNew.profilePicture || "";
+
+        console.log("profilePicture:", profilePicture);
+        console.log("userName:", userName);
+
+        return res.status(200).json({
+            success: true,
+            user: {
+                id,
+                userName,
+                email,
+                role,
+                profilePicture,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
 export {
     registerUser,

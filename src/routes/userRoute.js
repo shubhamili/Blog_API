@@ -10,6 +10,6 @@ userRouter.route("/login").post(LoginUser)
 
 //protect routes
 userRouter.route("/logout").post(authenticateUser, logoutUser)
-userRouter.route("/getUserProfile").post(authenticateUser, getUserProfile)
+userRouter.route("/getUserProfile").get(authenticateUser, getUserProfile)
 
 export default userRouter;

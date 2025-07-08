@@ -143,21 +143,21 @@ const updatePost = async (req, res, next) => {
         const { id } = req.params
         const { content } = req.body
         const newImage = req.file ? req.file.path : null
-
+        let updatedImgCloud = null;
         const post = await Post.findById(id);
         if (!post) {
             throw new ApiError(404, "Post not found")
         }
+        if (newImage) {
+            const deleteImageCloud = await deleteImageFromCloudinary(post.postPicturePublicID)
+            if (!deleteImageCloud) {
+                console.log("Cloudinary image did not deleted");
+            }
+            updatedImgCloud = await uploadOnCloudinary(newImage);
 
-        const deleteImageCloud = await deleteImageFromCloudinary(post.postPicturePublicID)
-        if (!deleteImageCloud) {
-            console.log("Cloudinary image did not deleted");
-        }
-
-        const updatedImgCloud = await uploadOnCloudinary(newImage);
-
-        if (!updatedImgCloud) {
-            throw new ApiError(402, "Cloudinary has some problem")
+            if (!updatedImgCloud) {
+                throw new ApiError(402, "Cloudinary has some problem")
+            }
         }
 
         if (content) {
@@ -167,8 +167,6 @@ const updatePost = async (req, res, next) => {
         if (newImage) {
             post.postPicture = updatedImgCloud.secure_url;
             post.postPicturePublicID = updatedImgCloud.public_id
-        } else {
-            throw new ApiError(401, "new image is not there")
         }
 
 
