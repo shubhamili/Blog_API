@@ -4,6 +4,7 @@ import { Post } from "../models/postModel.js";
 import { ApiError } from "../utils.js/ApiError.js";
 import { ApiResponse } from "../utils.js/apiResponse.js";
 import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
+import mongoose from "mongoose";
 
 const createPost = async (req, res, next) => {
 
@@ -74,7 +75,7 @@ const getAllPosts = async (req, res, next) => {
             .skip(skip)
             .limit(limit)
             .populate("author", "name email profilePicture")
-            .sort({ createdAt: 1 });
+            .sort({ createdAt: -1 });
 
         if (!posts || posts.length === 0) {
             return res.status(404).json({ message: "No posts found" });
@@ -93,28 +94,35 @@ const getAllPosts = async (req, res, next) => {
 
 
 }
-
 const getSinglePost = async (req, res) => {
     try {
-        const { id } = req.params
-        const post = await Post.findById(id).populate("author", "name email profilePicture")
+        const { id } = req.params;
+
+        const post = await Post.findById(id)
+            .populate("author", "userName email profilePicture")
+            .populate({
+                path: "comments.user",
+                select: "userName profilePicture",
+            })
+            .populate({
+                path: "likes",
+                select: "_id userName profilePicture",
+            });
+
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
+
         return res.status(200).json(
             new ApiResponse(200, post, "Post fetched successfully")
-        )
+        );
     } catch (error) {
         return res.status(500).json(
-            new ApiError(
-                500,
-                "Internal server error",
-                error.message || "Something went wrong"
-            )
-        )
-
+            new ApiError(500, "Internal server error", error.message)
+        );
     }
-}
+};
+
 
 const getUserPosts = async (req, res) => {
     try {
@@ -247,6 +255,10 @@ const addComment = async (req, res, next) => {
         const userId = req.user._id;
         const { comment } = req.body;
 
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            throw new ApiError(400, "Invalid post ID");
+        }
+
         if (!comment) {
             throw new ApiError(400, "Comment cannot be empty");
         }
@@ -262,13 +274,24 @@ const addComment = async (req, res, next) => {
         };
 
         post.comments.push(newComment);
-        await post.save();
+        const commentedPost = await post.save();
+        await commentedPost.populate("comments.user", "userName profilePicture");
 
-        return res.status(201).json(new ApiResponse(
-            201,
-            "Comment added successfully",
-            { totalComments: post.comments.length, comment: newComment }
-        ));
+        if (!commentedPost) {
+            return res.status(201).json(new ApiResponse(
+                402,
+                "Comment add failed",
+            ));
+        }
+
+        return res.status(201).json({
+            success: true,
+            comment: newComment, // or populate before returning
+            totalComments: post.comments.length,
+            updatedPost: commentedPost,
+        });
+
+
 
     } catch (error) {
         next(error);
