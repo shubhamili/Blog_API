@@ -8,7 +8,7 @@ import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
 const registerUser = async (req, res) => {
 
     try {
-        const { userName, Name, email, password, bio, role } = req.body;
+        const { userName, Name, email, password, bio } = req.body;
         const profilePicture = req.file ? req.file.path : null
 
         if ([userName, email, , password].some((field) => field?.trim() === "")) {
@@ -17,7 +17,7 @@ const registerUser = async (req, res) => {
 
         const useExistsAlready = await User.findOne({ $or: [{ userName }, { email }] })
         if (useExistsAlready) {
-            throw new ApiError(400, "User already exists")
+            throw new ApiError(400, "User already exists with the email or username")
         }
         let uploadedImageUrl = "";
         if (profilePicture) {
@@ -48,7 +48,7 @@ const registerUser = async (req, res) => {
             email,
             profilePicture: uploadedImageUrl,
             bio,
-            role,
+          
         })
 
         //jwt token
@@ -79,7 +79,7 @@ const registerUser = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "user registered successful",
-            user: { id: user._id, username: user.userName, email: user.email, role: user.role, profilePicture: createdUser.profilePicture },
+            user: { id: user._id, username: user.userName, email: user.email, profilePicture: createdUser.profilePicture },
         });
 
 
@@ -138,7 +138,7 @@ const LoginUser = async (req, res) => {
     res.status(200).json({
         success: true,
         message: "Login successful",
-        user: { id: user._id, userName: user.userName, email: user.email, role: user.role },
+        user: { id: user._id, userName: user.userName, email: user.email },
     });
 
 }
@@ -161,32 +161,6 @@ const logoutUser = async (req, res) => {
     });
 }
 
-// const getUserProfile = async (req, res, next) => {
-//     if (!req.user) {
-//         return res.status(401).json({ success: false, message: "Unauthorized" });
-//     }
-
-//     const { id, userName, email, role
-//     } = req.user;
-
-//     const userNew = await User.findById(id)
-
-//     if (!userNew) {
-//         res.status(403).json({
-//             success: false,
-//             msg: "user not found"
-
-//         });
-//     }
-//     const profilePicture = userNew.profilePicture
-//     console.log("profilePicture",profilePicture);
-//     console.log("userNew",userName);
-//     res.status(200).json({
-//         success: true,
-//         user: { id, userName, email, role, profilePicture },
-//     });
-
-// }
 
 const getUserProfile = async (req, res, next) => {
     try {
@@ -197,7 +171,7 @@ const getUserProfile = async (req, res, next) => {
             });
         }
 
-        const { id, userName, email, role } = req.user;
+        const { id, userName, email } = req.user;
 
         const userNew = await User.findById(id);
 
@@ -219,7 +193,6 @@ const getUserProfile = async (req, res, next) => {
                 id,
                 userName,
                 email,
-                role,
                 profilePicture,
             },
         });

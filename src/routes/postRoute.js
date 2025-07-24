@@ -1,30 +1,27 @@
 import express from "express";
 import { addComment, createPost, deletePost, getAllPosts, getSinglePost, getUserPosts, toggleLikePost, totalPostbyEachUser, updatePost } from "../controllers/postController.js";
-// import { authenticateUser } from "../middlewares/authMiddleware.js";
-// import passport from "passport";
 import { upload } from "../middlewares/multerMiddleware.js";
-import { authorizeRoles } from "../middlewares/authorizeRoles.js";
-import { authenticateUser } from "../middlewares/authenticateUser.js";
+import { verifyToken } from "../middlewares/verifyToken.js";
 
 
 
 const postRouter = express.Router();
 
-postRouter.route("/create").post(authenticateUser, authorizeRoles("admin", "editor"), upload.single("postPicture"), createPost);
+postRouter.route("/create").post(verifyToken, upload.single("postPicture"), createPost);
 
-postRouter.route("/get-all-posts").get(authenticateUser, getAllPosts);
+postRouter.route("/get-all-posts").get(verifyToken, getAllPosts);
 
-postRouter.route("/getSinglePost/:id").get(authenticateUser, getSinglePost);
+postRouter.route("/getSinglePost/:id").get(verifyToken, getSinglePost);
 
-postRouter.route("/getUserPosts").get(authenticateUser, getUserPosts);
+postRouter.route("/getUserPosts").get(verifyToken, getUserPosts);
 
-postRouter.route("/updatePost/:id").put(authenticateUser, authorizeRoles("editor", "admin"), upload.single("postPicture"), updatePost);
+postRouter.route("/updatePost/:id").put(verifyToken, upload.single("postPicture"), updatePost);
 
-postRouter.route("/deletePost/:id").delete(authenticateUser, authorizeRoles("admin", "editor"), deletePost);
+postRouter.route("/deletePost/:id").delete(verifyToken,  deletePost);
 
-postRouter.route("/likePost/:id").post(authenticateUser, toggleLikePost);
+postRouter.route("/likePost/:id").post(verifyToken, toggleLikePost);
 
-postRouter.route("/addComment/:id").post(authenticateUser, addComment);
+postRouter.route("/addComment/:id").post(verifyToken, addComment);
 
 postRouter.route("/totalPostbyEachUser").get(totalPostbyEachUser);
 
