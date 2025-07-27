@@ -3,6 +3,7 @@ import { User } from "../models/userModel.js";
 
 export const verifyToken = async (req, res, next) => {
     const token = req.cookies.token; // Get token from cookies
+    console.log("verifying token", token);
 
     if (!token) {
         return res.status(401).json({ message: "Access denied. No token provided." });
@@ -21,7 +22,7 @@ export const verifyToken = async (req, res, next) => {
             userName: user.userName,
             email: user.email,
         };
-        console.log("user  veryfied");
+        console.log("user verified", req.user);
 
         next();
     } catch (error) {

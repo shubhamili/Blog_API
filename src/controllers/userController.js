@@ -1,6 +1,4 @@
 import { User } from "../models/userModel.js";
-import { ApiError } from "../utils.js/ApiError.js";
-import { ApiResponse } from "../utils.js/apiResponse.js";
 import jwt from "jsonwebtoken";
 import { generateToken } from "../utils.js/jwt.js";
 import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
@@ -12,12 +10,22 @@ const registerUser = async (req, res) => {
         const profilePicture = req.file ? req.file.path : null
 
         if ([userName, email, , password].some((field) => field?.trim() === "")) {
-            throw new ApiError(400, "Please fill all the fields")
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required",
+                data: null,
+                error: "ValidationError",
+            });
         }
 
         const useExistsAlready = await User.findOne({ $or: [{ userName }, { email }] })
         if (useExistsAlready) {
-            throw new ApiError(400, "User already exists with the email or username")
+            return res.status(409).json({
+                success: false,
+                message: "User already exists with this username or email",
+                data: null,
+                error: "UserExistsError",
+            });
         }
         let uploadedImageUrl = "";
         if (profilePicture) {
@@ -55,13 +63,23 @@ const registerUser = async (req, res) => {
 
         const token = generateToken(user)
         if (!token) {
-            throw new ApiError(400, "Token not generated")
+            return res.status(400).json({
+                success: false,
+                message: "Token not generated",
+                data: null,
+                error: "TokenError",
+            });
         }
 
         const createdUser = await User.findById(user._id).select("-password")
 
         if (!createdUser) {
-            throw new ApiError(400, "User not created")
+            return res.status(400).json({
+                success: false,
+                message: "User not created",
+                data: null,
+                error: "UserCreationError",
+            });
 
         }
 
@@ -75,7 +93,7 @@ const registerUser = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "user registered successful",
-            user: { id: user._id, username: user.userName, email: user.email, profilePicture: createdUser.profilePicture },
+            userData: { id: user._id, username: user.userName, email: user.email, profilePicture: createdUser.profilePicture },
         });
 
 
@@ -88,7 +106,12 @@ const registerUser = async (req, res) => {
 const LoginUser = async (req, res) => {
     const { userName, password } = req.body;
     if ([userName, password].some((field) => field?.trim() === "")) {
-        throw new ApiError(400, "all fields are required")
+        return res.status(400).json({
+            success: false,
+            msg: "All fields are required",
+            data: null,
+            error: "ValidationError",
+        });
     }
     const user = await User.findOne({ userName });
 
@@ -103,26 +126,35 @@ const LoginUser = async (req, res) => {
     console.log(passwordVarified);
 
     if (!passwordVarified) {
-        new ApiError(400, "password has some problem")
+        return res.status(400).json({
+            success: false,
+            msg: "Invalid credentials",
+            data: null,
+            error: "AuthenticationError",
+        });
     }
 
     //authentication token
     const token = generateToken(user)
     if (!token) {
-        throw new ApiError(400, "Token not generated")
+        return res.status(400).json({
+            success: false,
+            message: "Token not generated",
+            data: null,
+            error: "TokenError",
+        });
     }
 
     const loggedInUser = await User.findById(user._id).select("-password")
     if (!loggedInUser) {
-        throw new ApiError(400, "User not logged in")
+        return res.status(400).json({
+            success: false,
+            message: "User not found",
+            data: null,
+            error: "UserNotFoundError",
+        });
     }
 
-    // res.cookie("token", token, {
-    //     httpOnly: true,
-    //     secure: true,
-    //     sameSite: "strict",
-    //     maxAge: 24 * 60 * 60 * 1000, // 1 day
-    // });
     res.cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -132,7 +164,7 @@ const LoginUser = async (req, res) => {
     res.status(200).json({
         success: true,
         message: "Login successful",
-        user: { id: user._id, userName: user.userName, email: user.email },
+        userData: loggedInUser
     });
 
 }

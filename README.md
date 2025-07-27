@@ -17,7 +17,6 @@ This is a RESTful API for a blog platform where users can sign up, log in, creat
 - ✅ File upload for post pictures using `multer`
 - ✅ Like/unlike posts
 - ✅ Add comments to posts
-- ✅ Secure routes with Passport JWT strategy
 - ✅ Pagination for posts
 - ✅ MongoDB and Mongoose for database operations
 - ✅ Modular architecture with controllers, models, middlewares
@@ -28,7 +27,6 @@ This is a RESTful API for a blog platform where users can sign up, log in, creat
 
 - **Backend:** Node.js, Express.js
 - **Database:** MongoDB with Mongoose ODM
-- **Authentication:** JWT + Passport.js
 - **File Upload:** Multer
 - **Cloud Storage (Optional):** Cloudinary
 - **Environment Config:** dotenv , cookie-parser

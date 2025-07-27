@@ -1,8 +1,6 @@
 import path from "path";
 import fs from "fs";
 import { Post } from "../models/postModel.js";
-import { ApiError } from "../utils.js/ApiError.js";
-import { ApiResponse } from "../utils.js/apiResponse.js";
 import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
 import mongoose from "mongoose";
 
@@ -23,7 +21,12 @@ const createPost = async (req, res, next) => {
         if (postPicture) {
             postPicCloud = await uploadOnCloudinary(postPicture)
             if (!postPicCloud) {
-                throw new ApiError(401, "Problem in cloudinary Upload")
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading to Cloudinary or file not provided",
+                    data: null,
+                    error: "CloudinaryError",
+                });
             }
         }
 
@@ -39,9 +42,11 @@ const createPost = async (req, res, next) => {
         }
 
         return res.status(201).json(
-            new ApiResponse(
-                201, newPost, "Post created succesfully"
-            )
+            {
+                success: true,
+                message: "Post created successfully",
+                data: newPost,
+            }
         )
 
     } catch (error) {
@@ -50,7 +55,6 @@ const createPost = async (req, res, next) => {
 }
 
 const getAllPosts = async (req, res, next) => {
-
     try {
         let page = Number(req.query.page) || 1;
         let limit = Number(req.query.limit) || 10;
@@ -71,7 +75,12 @@ const getAllPosts = async (req, res, next) => {
             .sort({ createdAt: -1 });
 
         if (!posts || posts.length === 0) {
-            return res.status(404).json({ message: "No posts found" });
+            return res.status(404).json({
+                success: false,
+                message: "No posts found",
+                data: null,
+                error: "NoPostsFoundError",
+            });
         }
 
         return res.status(200).json({
@@ -107,11 +116,19 @@ const getSinglePost = async (req, res) => {
         }
 
         return res.status(200).json(
-            new ApiResponse(200, post, "Post fetched successfully")
+            {
+                success: true,
+                message: "Post fetched successfully",
+                data: post,
+            }
         );
     } catch (error) {
         return res.status(500).json(
-            new ApiError(500, "Internal server error", error.message)
+            {
+                success: false,
+                message: "Internal server error",
+                error: error.message || "Something went wrong"
+            }
         );
     }
 };
@@ -119,21 +136,27 @@ const getSinglePost = async (req, res) => {
 
 const getUserPosts = async (req, res) => {
     try {
-        const userId = req.user._id
+        const userId = req.user.id
         const posts = await Post.find({ author: userId }).populate("author", "name email profilePicture").sort({ createdAt: -1 })
+        console.log("User posts fetched successfully", userId, posts);
+
         if (!posts) {
             return res.status(404).json({ message: "No posts found" });
         }
         return res.status(200).json(
-            new ApiResponse(200, posts, "Posts fetched successfully")
+            {
+                success: true,
+                message: "User posts fetched successfully",
+                data: posts,
+            }
         )
     } catch (error) {
         return res.status(500).json(
-            new ApiError(
-                500,
-                "Internal server error",
-                error.message || "Something went wrong"
-            )
+            {
+                success: false,
+                message: "Internal server error",
+                error: error.message || "Something went wrong"
+            }
         )
     }
 }
@@ -147,7 +170,12 @@ const updatePost = async (req, res, next) => {
         let updatedImgCloud = null;
         const post = await Post.findById(id);
         if (!post) {
-            throw new ApiError(404, "Post not found")
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+                data: null,
+                error: "PostNotFoundError",
+            });
         }
         if (newImage) {
             const deleteImageCloud = await deleteImageFromCloudinary(post.postPicturePublicID)
@@ -157,7 +185,12 @@ const updatePost = async (req, res, next) => {
             updatedImgCloud = await uploadOnCloudinary(newImage);
 
             if (!updatedImgCloud) {
-                throw new ApiError(402, "Cloudinary has some problem")
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading to Cloudinary or file not provided",
+                    data: null,
+                    error: "CloudinaryError",
+                });
             }
         }
 
@@ -173,7 +206,13 @@ const updatePost = async (req, res, next) => {
 
         const updatedPost = await post.save()
 
-        return res.status(202).json(new ApiResponse(202, updatedPost, "post Updated"))
+        return res.status(202).json(
+            {
+                success: true,
+                message: "Post updated successfully",
+                data: updatedPost,
+            }
+        )
 
     } catch (error) {
         next(error)
@@ -184,27 +223,54 @@ const updatePost = async (req, res, next) => {
 const deletePost = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const userID = req.user._id;
+        const userID = req.user.id;
 
         const postToBeDeleted = await Post.findById(id);
 
         if (!postToBeDeleted) {
-            throw new ApiError(404, "Post not found");
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+                data: null,
+                error: "PostNotFoundError",
+            });
         }
 
-        // if (postToBeDeleted.author.toString() !== userID.toString()) {
-        //     throw new ApiError(403, "Not authorized to delete this post");
-        // }
+        if (postToBeDeleted.author.toString() !== userID.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to delete this post",
+                data: null,
+                error: "UnauthorizedError",
+            });
+        }
 
         const deletedPost = await Post.deleteOne({ _id: id });
 
         if (!deletedPost || deletedPost.deletedCount === 0) {
-            throw new ApiError(500, "Failed to delete the post");
+            return res.status(404).json({
+                success: false,
+                message: "Post not found or already deleted",
+                data: null,
+                error: "PostDeletionError",
+            });
         }
 
-        return res
-            .status(200)
-            .json(new ApiResponse(200, "Deleted successfully", deletedPost));
+        // If the post has an image, delete it from Cloudinary
+        if (postToBeDeleted.postPicturePublicID) {
+            const deleteImageCloud = await deleteImageFromCloudinary(postToBeDeleted.postPicturePublicID);
+            if (!deleteImageCloud) {
+                console.log("Cloudinary image did not deleted");
+            }
+        }
+        return res.status(200).json(
+            {
+                success: true,
+                message: "Post deleted successfully",
+                data: deletedPost,
+            }
+        );
+
     } catch (error) {
         next(error); // ✔ Pass to global error handler
     }
@@ -214,11 +280,16 @@ const deletePost = async (req, res, next) => {
 const toggleLikePost = async (req, res, next) => {
     try {
         const { id } = req.params
-        const userId = req.user._id
+        const userId = req.user.id
 
         const post = await Post.findById(id)
         if (!post) {
-            throw new ApiError(404, "Post not found")
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+                data: null,
+                error: "PostNotFoundError",
+            });
         }
 
         const Liked = post.likes.includes(userId)
@@ -228,11 +299,12 @@ const toggleLikePost = async (req, res, next) => {
             post.likes.push(userId)
         }
         await post.save();
-        return res.status(200).json(new ApiResponse(
-            200,
-            `${Liked ? "Unliked" : "Liked"} successfully`,
-            { totalLikes: post.likes.length }
-        ));
+        return res.status(200).json({
+            success: true,
+            message: Liked ? "Post unliked successfully" : "Post liked successfully",
+            totalLikes: post.likes.length,
+            updatedPost: post,
+        });
     } catch (error) {
         next(error)
     }
@@ -241,20 +313,35 @@ const toggleLikePost = async (req, res, next) => {
 const addComment = async (req, res, next) => {
     try {
         const { id } = req.params; // postId
-        const userId = req.user._id;
+        const userId = req.user.id;
         const { comment } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            throw new ApiError(400, "Invalid post ID");
+            return res.status(400).json({
+                success: false,
+                message: "Invalid post ID",
+                data: null,
+                error: "InvalidPostIdError",
+            });
         }
 
         if (!comment) {
-            throw new ApiError(400, "Comment cannot be empty");
+            return res.status(400).json({
+                success: false,
+                message: "Comment cannot be empty",
+                data: null,
+                error: "EmptyCommentError",
+            });
         }
 
         const post = await Post.findById(id);
         if (!post) {
-            throw new ApiError(404, "Post not found");
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+                data: null,
+                error: "PostNotFoundError",
+            });
         }
 
         const newComment = {
@@ -267,10 +354,14 @@ const addComment = async (req, res, next) => {
         const commentDoc = await commentedPost.populate("comments.user", "userName profilePicture");
 
         if (!commentedPost) {
-            return res.status(201).json(new ApiResponse(
-                402,
-                "Comment add failed",
-            ));
+            return res.status(201).json(
+                {
+                    success: false,
+                    message: "Failed to add comment",
+                    data: null,
+                    error: "CommentError",
+                }
+            );
         }
 
         return res.status(201).json({
@@ -314,8 +405,11 @@ const totalPostbyEachUser = async (req, res, next) => {
         return res.status(404).json({ message: "No posts found" });
     }
     return res.status(200).json(
-        new ApiResponse(200, PostCount, "Post count by each user")
-    )
+        {
+            success: true,
+            message: "Total posts by each user fetched successfully",
+            data: PostCount,
+        })
 }
 
 
