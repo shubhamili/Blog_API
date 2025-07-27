@@ -7,7 +7,6 @@ import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloud
 import mongoose from "mongoose";
 
 const createPost = async (req, res, next) => {
-
     try {
         const { content } = req.body
         const userId = req.user.id
@@ -15,22 +14,18 @@ const createPost = async (req, res, next) => {
 
 
         if (!userId) {
-            return res.status(401).json({ message: "Unauthorized userId not getting" });
+            return res.status(401).json({ message: "Unauthorized" });
         }
         if (!content) {
             return res.status(400).json({ message: "content field is required" });
         }
-
-        if (!postPicture) {
-            throw new ApiError(401, "Post picture is not there")
+        let postPicCloud = null;
+        if (postPicture) {
+            postPicCloud = await uploadOnCloudinary(postPicture)
+            if (!postPicCloud) {
+                throw new ApiError(401, "Problem in cloudinary Upload")
+            }
         }
-
-        const postPicCloud = await uploadOnCloudinary(postPicture)
-
-        if (!postPicCloud) {
-            throw new ApiError(401, "Problem in cloudinary uploade")
-        }
-
 
         const newPost = await Post.create({
             author: userId,
@@ -40,7 +35,7 @@ const createPost = async (req, res, next) => {
         })
 
         if (!newPost) {
-            return res.status(400).json({ message: "Post not created" });
+            return res.status(400).json({ message: "failed to create post!" });
         }
 
         return res.status(201).json(
@@ -68,9 +63,7 @@ const getAllPosts = async (req, res, next) => {
         }
 
         let skip = (page - 1) * limit;
-
-        const total = await Post.countDocuments(); // ✅ Await here
-
+        const total = await Post.countDocuments();
         const posts = await Post.find({})
             .skip(skip)
             .limit(limit)
@@ -106,7 +99,7 @@ const getSinglePost = async (req, res) => {
             })
             .populate({
                 path: "likes",
-                select: "_id userName profilePicture",
+                select: "userName profilePicture",
             });
 
         if (!post) {
@@ -234,16 +227,12 @@ const toggleLikePost = async (req, res, next) => {
         } else {
             post.likes.push(userId)
         }
-
         await post.save();
-
         return res.status(200).json(new ApiResponse(
             200,
             `${Liked ? "Unliked" : "Liked"} successfully`,
             { totalLikes: post.likes.length }
         ));
-
-
     } catch (error) {
         next(error)
     }
@@ -275,7 +264,7 @@ const addComment = async (req, res, next) => {
 
         post.comments.push(newComment);
         const commentedPost = await post.save();
-        await commentedPost.populate("comments.user", "userName profilePicture");
+        const commentDoc = await commentedPost.populate("comments.user", "userName profilePicture");
 
         if (!commentedPost) {
             return res.status(201).json(new ApiResponse(
@@ -290,9 +279,6 @@ const addComment = async (req, res, next) => {
             totalComments: post.comments.length,
             updatedPost: commentedPost,
         });
-
-
-
     } catch (error) {
         next(error);
     }

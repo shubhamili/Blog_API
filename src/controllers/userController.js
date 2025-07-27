@@ -48,7 +48,7 @@ const registerUser = async (req, res) => {
             email,
             profilePicture: uploadedImageUrl,
             bio,
-          
+
         })
 
         //jwt token
@@ -58,16 +58,12 @@ const registerUser = async (req, res) => {
             throw new ApiError(400, "Token not generated")
         }
 
-
-
         const createdUser = await User.findById(user._id).select("-password")
 
         if (!createdUser) {
             throw new ApiError(400, "User not created")
 
         }
-
-
 
         res.cookie("token", token, {
             httpOnly: true,
@@ -94,9 +90,7 @@ const LoginUser = async (req, res) => {
     if ([userName, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "all fields are required")
     }
-
-    const user = await User.findOne({ userName })
-
+    const user = await User.findOne({ userName });
 
     if (!user) {
         return res.status(400).json({
@@ -144,12 +138,6 @@ const LoginUser = async (req, res) => {
 }
 
 const logoutUser = async (req, res) => {
-
-    // console.log("logout called");
-
-    // console.log(req.cookies.token);
-    // console.log(req.user);
-
     res.clearCookie("token", {
         httpOnly: true,
         secure: true,
@@ -184,17 +172,9 @@ const getUserProfile = async (req, res, next) => {
 
         const profilePicture = userNew.profilePicture || "";
 
-        console.log("profilePicture:", profilePicture);
-        console.log("userName:", userName);
-
         return res.status(200).json({
             success: true,
-            user: {
-                id,
-                userName,
-                email,
-                profilePicture,
-            },
+            userData: userNew
         });
     } catch (error) {
         next(error);

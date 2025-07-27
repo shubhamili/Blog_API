@@ -21,6 +21,7 @@ export const verifyToken = async (req, res, next) => {
             userName: user.userName,
             email: user.email,
         };
+        console.log("user  veryfied");
 
         next();
     } catch (error) {
