@@ -59,17 +59,7 @@ const registerUser = async (req, res) => {
 
         })
 
-        //jwt token
 
-        const token = generateToken(user)
-        if (!token) {
-            return res.status(400).json({
-                success: false,
-                message: "Token not generated",
-                data: null,
-                error: "TokenError",
-            });
-        }
 
         const createdUser = await User.findById(user._id).select("-password")
 
@@ -82,18 +72,28 @@ const registerUser = async (req, res) => {
             });
 
         }
+        //jwt token
 
+        const token = generateToken(createdUser)
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: "Token not generated",
+                data: null,
+                error: "TokenError",
+            });
+        }
         res.cookie("token", token, {
             httpOnly: true,
-            secure: true,
-            sameSite: "strict",
-            maxAge: 24 * 60 * 60 * 1000, // 1 day
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
         res.status(200).json({
             success: true,
             message: "user registered successful",
-            userData: { id: user._id, username: user.userName, email: user.email, profilePicture: createdUser.profilePicture },
+            user: { id: user._id, username: user.userName, email: user.email, profilePicture: createdUser.profilePicture },
         });
 
 
@@ -105,6 +105,7 @@ const registerUser = async (req, res) => {
 
 const LoginUser = async (req, res) => {
     const { userName, password } = req.body;
+
     if ([userName, password].some((field) => field?.trim() === "")) {
         return res.status(400).json({
             success: false,
@@ -123,7 +124,7 @@ const LoginUser = async (req, res) => {
     }
 
     const passwordVarified = await user.isPasswordCorrect(password)
-    console.log(passwordVarified);
+    console.log("passwordVarified", passwordVarified);
 
     if (!passwordVarified) {
         return res.status(400).json({
@@ -146,6 +147,7 @@ const LoginUser = async (req, res) => {
     }
 
     const loggedInUser = await User.findById(user._id).select("-password")
+
     if (!loggedInUser) {
         return res.status(400).json({
             success: false,
@@ -155,26 +157,41 @@ const LoginUser = async (req, res) => {
         });
     }
 
+
+    // res.cookie("token", token, {
+    //     httpOnly: true,
+    //     secure: false,       // ❗ in dev only
+    //     sameSite: "Lax",     // ✅ safe for same-origin or same-device dev testing
+    //     maxAge: 7 * 24 * 60 * 60 * 1000,
+    // });
     res.cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "Lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.status(200).json({
+
+    return res.status(200).json({
         success: true,
         message: "Login successful",
-        userData: loggedInUser
+        user: loggedInUser
     });
+
 
 }
 
 const logoutUser = async (req, res) => {
+    // res.clearCookie("token", {
+    //     httpOnly: true,
+    //     sameSite: "None",
+    //     secure: true, // ✅ Must be true if using SameSite=None
+    // });
     res.clearCookie("token", {
         httpOnly: true,
-        secure: true,
-        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     });
+
     res.status(200).json({
         success: true,
         message: "Logout successful",
@@ -206,7 +223,8 @@ const getUserProfile = async (req, res, next) => {
 
         return res.status(200).json({
             success: true,
-            userData: userNew
+            message: "User profile retrieved successfully",
+            user: userNew
         });
     } catch (error) {
         next(error);

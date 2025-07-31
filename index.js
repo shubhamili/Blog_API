@@ -25,11 +25,10 @@ ConnectDB().then(() => {
 
 
 app.use(cors({
-    origin: (origin, callback) => {
-        callback(null, origin); // ✅ dynamically allow any origin
-    },
-    credentials: true, // ✅ allow sending cookies
+    origin: "http://localhost:5173", // or your frontend origin
+    credentials: true,
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

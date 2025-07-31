@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/userModel.js";
 
 export const verifyToken = async (req, res, next) => {
-    const token = req.cookies.token; // Get token from cookies
+    const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
     console.log("verifying token", token);
 
     if (!token) {
@@ -11,6 +11,7 @@ export const verifyToken = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("Decoded token:", decoded);
         const user = await User.findById(decoded?.id).select("-password");
 
         if (!user) {
