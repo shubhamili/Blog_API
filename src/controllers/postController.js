@@ -294,7 +294,7 @@ const toggleLikePost = async (req, res, next) => {
 
         const Liked = post.likes.includes(userId)
         if (Liked) {
-            post.likes = post.likes.filter(SingleId => SingleId.toString() !== userId.toString())
+            post.likes = post.likes.filter(SingleId => SingleId?.toString() !== userId?.toString())
         } else {
             post.likes.push(userId)
         }
