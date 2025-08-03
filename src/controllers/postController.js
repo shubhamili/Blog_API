@@ -4,28 +4,89 @@ import { Post } from "../models/postModel.js";
 import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
 import mongoose from "mongoose";
 
+// const createPost = async (req, res, next) => {
+//     try {
+//         const { content } = req.body
+//         const userId = req.user.id
+//         const postPicture = req.file.path
+
+//         if (!userId) {
+//             return res.status(401).json({ message: "Unauthorized" });
+//         }
+//         if (!content) {
+//             return res.status(400).json({ message: "content field is required" });
+//         }
+//         let postPicCloud = null;
+//         console.log("Post picture path:", postPicture);
+
+//         if (postPicture && postPicture !== "null") {
+//             try {
+//                 postPicCloud = await uploadOnCloudinary(postPicture);
+//             } catch (err) {
+//                 return res.status(500).json({
+//                     success: false,
+//                     message: "Error uploading image",
+//                     error: err.message || "Cloudinary upload failed",
+//                 });
+//             }
+//         }
+//         console.log("Post picture uploaded to Cloudinary:", postPicCloud);
+
+
+//         const newPost = await Post.create({
+//             author: userId,
+//             content,
+//             postPicture: postPicCloud.secure_url || null,
+//             postPicturePublicID: postPicCloud.public_id || null,
+//         })
+
+//         if (!newPost) {
+//             return res.status(400).json({ message: "failed to create post!" });
+//         }
+
+//         return res.status(201).json(
+//             {
+//                 success: true,
+//                 message: "Post created successfully",
+//                 data: newPost,
+//             }
+//         )
+
+//     } catch (error) {
+//         next(error)
+//     }
+// }
+
 const createPost = async (req, res, next) => {
     try {
-        const { content } = req.body
-        const userId = req.user.id
-        const postPicture = req.file ? req.file.path : null
-
+        const { content } = req.body;
+        const userId = req.user?.id;
+        const postPicture = req.file?.path || null;
 
         if (!userId) {
-            return res.status(401).json({ message: "Unauthorized" });
+            return res.status(401).json({ success: false, message: "Unauthorized" });
         }
+
         if (!content) {
-            return res.status(400).json({ message: "content field is required" });
+            return res.status(400).json({ success: false, message: "Content is required" });
         }
+
         let postPicCloud = null;
+
         if (postPicture) {
-            postPicCloud = await uploadOnCloudinary(postPicture)
-            if (!postPicCloud) {
-                return res.status(400).json({
+            try {
+                postPicCloud = await uploadOnCloudinary(postPicture);
+                if (!postPicCloud) {
+                    return res.status(500).json({
+                        success: false,
+                        message: "Cloudinary upload failed",
+                    });
+                }
+            } catch (err) {
+                return res.status(500).json({
                     success: false,
-                    message: "Error uploading to Cloudinary or file not provided",
-                    data: null,
-                    error: "CloudinaryError",
+                    message: "Error uploading to Cloudinary",
+                    error: err.message,
                 });
             }
         }
@@ -33,26 +94,28 @@ const createPost = async (req, res, next) => {
         const newPost = await Post.create({
             author: userId,
             content,
-            postPicture: postPicCloud.secure_url || null,
-            postPicturePublicID: postPicCloud.public_id || null,
-        })
+            postPicture: postPicCloud?.secure_url || null,
+            postPicturePublicID: postPicCloud?.public_id || null,
+        });
 
         if (!newPost) {
-            return res.status(400).json({ message: "failed to create post!" });
+            return res.status(400).json({
+                success: false,
+                message: "Failed to create post",
+            });
         }
 
-        return res.status(201).json(
-            {
-                success: true,
-                message: "Post created successfully",
-                data: newPost,
-            }
-        )
+        return res.status(201).json({
+            success: true,
+            message: "Post created successfully",
+            data: newPost,
+        });
 
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
+
 
 const getAllPosts = async (req, res, next) => {
     try {
@@ -106,10 +169,7 @@ const getSinglePost = async (req, res) => {
                 path: "comments.user",
                 select: "userName profilePicture",
             })
-            .populate({
-                path: "likes",
-                select: "userName profilePicture",
-            });
+
 
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
@@ -137,7 +197,7 @@ const getSinglePost = async (req, res) => {
 const getUserPosts = async (req, res) => {
     try {
         const userId = req.user.id
-        const posts = await Post.find({ author: userId }).populate("author", "name email profilePicture").sort({ createdAt: -1 })
+        const posts = await Post.find({ author: userId }).populate("author", "userName email profilePicture").sort({ createdAt: -1 })
         console.log("User posts fetched successfully", userId, posts);
 
         if (!posts) {
@@ -351,7 +411,7 @@ const addComment = async (req, res, next) => {
 
         post.comments.push(newComment);
         const commentedPost = await post.save();
-        const commentDoc = await commentedPost.populate("comments.user", "userName profilePicture");
+        const commentDoc = await commentedPost.populate("comments.user", "userName profilePicture email");
 
         if (!commentedPost) {
             return res.status(201).json(
