@@ -1,10 +1,11 @@
 import { User } from "../models/userModel.js";
 import jwt from "jsonwebtoken";
-import { generateToken } from "../utils.js/jwt.js";
 import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
+import { generateAccessToken, generateRefreshToken } from "../utils.js/jwt.js";
+
+
 
 const registerUser = async (req, res) => {
-
     try {
         const { userName, Name, email, password, bio } = req.body;
         const profilePicture = req.file ? req.file.path : null
@@ -70,20 +71,19 @@ const registerUser = async (req, res) => {
                 data: null,
                 error: "UserCreationError",
             });
-
         }
-        //jwt token
 
-        const token = generateToken(createdUser)
-        if (!token) {
+        //jwt token
+        const refreshToken = generateRefreshToken(createdUser)
+        const accessToken = generateAccessToken(createdUser)
+        if (!refreshToken || !accessToken) {
             return res.status(400).json({
                 success: false,
                 message: "Token not generated",
                 data: null,
-                error: "TokenError",
             });
         }
-        res.cookie("token", token, {
+        res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
@@ -93,9 +93,14 @@ const registerUser = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "user registered successful",
-            user: { id: user._id, username: user.userName, email: user.email, profilePicture: createdUser.profilePicture },
+            user: {
+                id: user._id,
+                username: user.userName,
+                email: user.email,
+                profilePicture: createdUser.profilePicture,
+                accessToken: accessToken
+            },
         });
-
 
     } catch (error) {
         console.error("error in controller", error)
@@ -135,17 +140,6 @@ const LoginUser = async (req, res) => {
         });
     }
 
-    //authentication token
-    const token = generateToken(user)
-    if (!token) {
-        return res.status(400).json({
-            success: false,
-            message: "Token not generated",
-            data: null,
-            error: "TokenError",
-        });
-    }
-
     const loggedInUser = await User.findById(user._id).select("-password")
 
     if (!loggedInUser) {
@@ -156,15 +150,19 @@ const LoginUser = async (req, res) => {
             error: "UserNotFoundError",
         });
     }
+    //authentication token
+    const refreshToken = generateRefreshToken(loggedInUser)
+    const accessToken = generateAccessToken(loggedInUser)
+    if (!refreshToken || !accessToken) {
+        return res.status(400).json({
+            success: false,
+            message: "Token not generated",
+            data: null,
+        });
+    }
 
 
-    // res.cookie("token", token, {
-    //     httpOnly: true,
-    //     secure: false,       // ❗ in dev only
-    //     sameSite: "Lax",     // ✅ safe for same-origin or same-device dev testing
-    //     maxAge: 7 * 24 * 60 * 60 * 1000,
-    // });
-    res.cookie("token", token, {
+    res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
@@ -174,29 +172,83 @@ const LoginUser = async (req, res) => {
     return res.status(200).json({
         success: true,
         message: "Login successful",
-        user: loggedInUser
+        user: {
+            id: user._id,
+            userName: user.userName,
+            email: user.email,
+            profilePicture: loggedInUser.profilePicture,
+            accessToken: accessToken
+        }
     });
 
 
 }
 
 const logoutUser = async (req, res) => {
-    // res.clearCookie("token", {
-    //     httpOnly: true,
-    //     sameSite: "None",
-    //     secure: true, // ✅ Must be true if using SameSite=None
-    // });
-    res.clearCookie("token", {
+    res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     });
-
-    res.status(200).json({
-        success: true,
-        message: "Logout successful",
-    });
+    return res.sendStatus(204);
 }
+const refreshAccessToken = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+
+        if (!refreshToken) {
+            return res.status(401).json({
+                success: false,
+                message: "No refresh token provided",
+            });
+        }
+
+        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, async (err, decoded) => {
+            if (err) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Invalid or expired refresh token",
+                });
+            }
+
+            const foundUser = await User.findById(decoded.id).select("-password");
+
+            if (!foundUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found",
+                });
+            }
+
+            const newAccessToken = generateAccessToken(foundUser);
+
+            if (!newAccessToken) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to generate new access token",
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Access token refreshed successfully",
+                accessToken: newAccessToken,
+                user: {
+                    id: foundUser._id,
+                    userName: foundUser.userName,
+                    email: foundUser.email,
+                    profilePicture: foundUser.profilePicture,
+                },
+            });
+        });
+    } catch (err) {
+        console.error("Refresh error:", err.message);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
 
 
 const getUserProfile = async (req, res, next) => {
@@ -235,7 +287,6 @@ export {
     registerUser,
     LoginUser,
     logoutUser,
-    getUserProfile
+    getUserProfile,
+    refreshAccessToken
 }
-
-// https://www.youtube.com/watch?v=MIJt9H69QVc&list=WL&index=6

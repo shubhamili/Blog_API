@@ -221,13 +221,86 @@ const getUserPosts = async (req, res) => {
     }
 }
 
-//editor and admin can update post which is set into the routes
+// //editor and admin can update post which is set into the routes
+// const updatePost = async (req, res, next) => {
+//     try {
+//         const { id } = req.params
+//         const { content } = req.body
+//         const userId = req.user.id
+//         let postPicture = req.file.path || null;
+
+//         const post = await Post.findById(id);
+//         if (!post) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Post not found",
+//                 data: null,
+//                 error: "PostNotFoundError",
+//             });
+//         }
+//         if (userId.toString() !== post.author._id.toString()) {
+//             return res.status(403).json({
+//                 success: false,
+//                 message: "You are not authorized to update this post",
+//                 data: null,
+//             });
+//         }
+
+//         const updateDoc = {};
+//         if (content) { updateDoc.content = content } else { updateDoc.content = post.content };
+//         if (postPicture && postPicture !== "null") {
+//             updatedImgCloud = await uploadOnCloudinary(postPicture);
+//             if (!updatedImgCloud) {
+//                 return res.status(400).json({
+//                     success: false,
+//                     message: "Error uploading to Cloudinary or file not provided",
+//                     data: null,
+//                     error: "CloudinaryError",
+//                 });
+//             }
+//             updateDoc.postPicture = updatedImgCloud.secure_url;
+//             updateDoc.postPicturePublicID = updatedImgCloud.public_id;
+//         } else {
+//             updateDoc.postPicture = null;
+//             updateDoc.postPicturePublicID = null;
+//             const deleteImageCloud = await deleteImageFromCloudinary(post.postPicturePublicID)
+//             if (!deleteImageCloud) {
+//                 console.log("Cloudinary image delete failed!!");
+//             }
+//         }
+//         console.log("Update document:", updateDoc);
+//         Object.assign(post, updateDoc); // Update the post with new content and image
+//         // If the post has an image, delete the old one from Cloudinary
+
+
+//         const updatedPost = await post.save()
+
+//         return res.status(202).json(
+//             {
+//                 success: true,
+//                 message: "Post updated successfully",
+//                 data: updatedPost,
+//             }
+//         )
+
+//     } catch (error) {
+//         next(error)
+//     }
+// }
+
+
+
 const updatePost = async (req, res, next) => {
     try {
-        const { id } = req.params
-        const { content } = req.body
-        const newImage = req.file ? req.file.path : null
-        let updatedImgCloud = null;
+        const { id } = req.params;
+        const { content } = req.body;
+        const userId = req.user.id;
+
+        // Check if image was uploaded
+        const postPicture = req.file?.path || null;
+        console.log("Post picture path:", postPicture);
+
+        // Fetch post from DB
         const post = await Post.findById(id);
         if (!post) {
             return res.status(404).json({
@@ -237,47 +310,78 @@ const updatePost = async (req, res, next) => {
                 error: "PostNotFoundError",
             });
         }
-        if (newImage) {
-            const deleteImageCloud = await deleteImageFromCloudinary(post.postPicturePublicID)
-            if (!deleteImageCloud) {
-                console.log("Cloudinary image did not deleted");
-            }
-            updatedImgCloud = await uploadOnCloudinary(newImage);
 
+        // Check if user is authorized to update
+        if (userId.toString() !== post.author._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to update this post",
+                data: null,
+            });
+        }
+
+        // Prepare updated fields
+        const updateDoc = {};
+        updateDoc.content = content || post.content;
+
+        // If a new image was uploaded
+        if (postPicture && postPicture !== "null") {
+            console.log("Uploading new image to Cloudinary:", postPicture);
+
+            const updatedImgCloud = await uploadOnCloudinary(postPicture);
             if (!updatedImgCloud) {
                 return res.status(400).json({
                     success: false,
-                    message: "Error uploading to Cloudinary or file not provided",
+                    message: "Error uploading image to Cloudinary",
                     data: null,
                     error: "CloudinaryError",
                 });
             }
-        }
 
-        if (content) {
-            post.content = content;
-        }
+            updateDoc.postPicture = updatedImgCloud.secure_url;
+            updateDoc.postPicturePublicID = updatedImgCloud.public_id;
 
-        if (newImage) {
-            post.postPicture = updatedImgCloud.secure_url;
-            post.postPicturePublicID = updatedImgCloud.public_id
-        }
-
-
-        const updatedPost = await post.save()
-
-        return res.status(202).json(
-            {
-                success: true,
-                message: "Post updated successfully",
-                data: updatedPost,
+            // Delete old image if present
+            if (post.postPicturePublicID) {
+                await deleteImageFromCloudinary(post.postPicturePublicID);
             }
-        )
+        }
+
+        // If user removed image explicitly (frontend sends "null" string)
+        else if (postPicture === null) {
+            console.log("Removing post picture");
+            updateDoc.postPicture = null;
+            updateDoc.postPicturePublicID = null;
+
+            if (post.postPicturePublicID) {
+                // Delete the old image from Cloudinary
+                console.log("Deleting old image from Cloudinary:", post.postPicturePublicID);
+                const deleted = await deleteImageFromCloudinary(post.postPicturePublicID);
+                if (!deleted) {
+                    console.warn("Cloudinary image delete failed!");
+                }
+            }
+        }
+        // Apply updates to post
+        Object.assign(post, updateDoc);
+        const updatedPost = await post.save();
+        console.log("Post updated successfully:", updatedPost);
+
+
+        return res.status(202).json({
+            success: true,
+            message: "Post updated successfully",
+            data: updatedPost,
+        });
 
     } catch (error) {
-        next(error)
+        next(error); // Let Express error handler take care
     }
-}
+};
+
+
+
+
 
 //user only can delete his own post
 const deletePost = async (req, res, next) => {
