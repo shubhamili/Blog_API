@@ -4,6 +4,7 @@ import { User } from "../models/userModel.js";
 export const verifyToken = async (req, res, next) => {
     const accessToken = req.headers.authorization?.split(" ")[1];
     console.log("verifying token", accessToken);
+    console.log("verifying token", req.headers);
 
     if (!accessToken) {
         return res.status(401).json({ message: "Access denied. No accessToken provided." });
