@@ -7,9 +7,6 @@ const userSchema = new mongoose.Schema(
             require: true,
             unique: true,
         },
-        Name: {
-            type: String,
-        },
         email: {
             type: String,
             required: true,
@@ -29,6 +26,12 @@ const userSchema = new mongoose.Schema(
         bio: {
             type: String,
         },
+        location: {
+            type: String,
+        },
+        website: {
+            type: String,
+        }
     },
     {
         timestamps: true

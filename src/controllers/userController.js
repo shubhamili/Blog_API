@@ -1,13 +1,13 @@
 import { User } from "../models/userModel.js";
 import jwt from "jsonwebtoken";
-import { uploadOnCloudinary } from "../utils.js/cloudinary.js";
+import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
 import { generateAccessToken, generateRefreshToken } from "../utils.js/jwt.js";
-
+import sanitizeHtml from "sanitize-html";
 
 
 const registerUser = async (req, res) => {
     try {
-        const { userName, Name, email, password, bio } = req.body;
+        const { userName, email, password, bio } = req.body;
         const profilePicture = req.file ? req.file.path : null
 
         if ([userName, email, , password].some((field) => field?.trim() === "")) {
@@ -53,7 +53,6 @@ const registerUser = async (req, res) => {
         const user = await User.create({
             userName,
             password,
-            Name,
             email,
             profilePicture: uploadedImageUrl,
             bio,
@@ -192,6 +191,7 @@ const logoutUser = async (req, res) => {
     });
     return res.sendStatus(204);
 }
+
 const refreshAccessToken = async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
@@ -250,7 +250,6 @@ const refreshAccessToken = async (req, res) => {
     }
 };
 
-
 const getUserProfile = async (req, res, next) => {
     try {
         if (!req.user) {
@@ -283,10 +282,128 @@ const getUserProfile = async (req, res, next) => {
     }
 };
 
+const updateUserProfile = async (req, res) => {
+    try {
+        const { userName, email, bio, location, website } = req.body;
+        const profilePicture = req.file?.path || '';
+        const userId = req.user.id;
+
+        console.log("profilePicture", req.file?.path);
+
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+                data: null,
+                error: "UnauthorizedError",
+            });
+        }
+
+        if ([userName, email].some((field) => field?.trim() === "")) {
+            return res.status(400).json({
+                success: false,
+                message: "Username and email are required",
+                data: null,
+                error: "ValidationError",
+            });
+        }
+
+        const existingUser = await User.findOne({ _id: { $ne: userId }, $or: [{ userName }, { email }] });
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: "Username or email not available",
+                data: null,
+                error: "UserExistsError",
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+                data: null,
+                error: "UserNotFoundError",
+            });
+        }
+        user.userName = userName;
+        user.email = email;
+        user.bio = sanitizeHtml(bio);
+        user.location = sanitizeHtml(location);
+        user.website = sanitizeHtml(website);
+
+        console.log(user.bio, user.location, user.website);
+
+        if (profilePicture !== '') {
+            // Delete old image
+            if (user.profilePicturePublicID) {
+                await deleteImageFromCloudinary(user.profilePicturePublicID);
+            }
+
+            const cloudinaryUpload = await uploadOnCloudinary(profilePicture);
+            if (cloudinaryUpload) {
+                user.profilePicture = cloudinaryUpload.secure_url;
+                user.profilePicturePublicID = cloudinaryUpload.public_id;
+            }
+        }
+        else if (req.body.removeProfilePicture === "true") {
+            if (user?.profilePicture && user?.profilePicturePublicID) {
+                const deleteImage = await deleteImageFromCloudinary(user.profilePicturePublicID);
+                if (!deleteImage) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Error deleting image from Cloudinary",
+                        data: null,
+                        error: "CloudinaryError",
+                    });
+                }
+                user.profilePicture = "";
+                user.profilePicturePublicID = "";
+            }
+        }
+
+
+        const updatedUser = await user.save();
+        if (!updatedUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User profile not updated",
+                data: null,
+                error: "UserUpdateError",
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            message: "User profile updated successfully",
+            user: {
+                id: updatedUser._id,
+                userName: updatedUser.userName,
+                email: updatedUser.email,
+                profilePicture: updatedUser.profilePicture,
+                bio: updatedUser.bio,
+                location: updatedUser.location,
+                website: updatedUser.website,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating user profile:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            data: null,
+            error: "ServerError",
+        });
+    }
+};
+
+
 export {
     registerUser,
     LoginUser,
     logoutUser,
     getUserProfile,
-    refreshAccessToken
+    refreshAccessToken,
+    updateUserProfile
 }

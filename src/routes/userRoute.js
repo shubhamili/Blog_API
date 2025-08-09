@@ -1,5 +1,5 @@
 import express from "express";
-import { getUserProfile, LoginUser, logoutUser, refreshAccessToken, registerUser } from "../controllers/userController.js";
+import { getUserProfile, LoginUser, logoutUser, refreshAccessToken, registerUser, updateUserProfile } from "../controllers/userController.js";
 import { upload } from "../middlewares/multerMiddleware.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 
@@ -12,5 +12,5 @@ userRouter.route("/refreshAccessToken").get(refreshAccessToken)
 //protect routes
 userRouter.route("/logout").post(verifyToken, logoutUser)
 userRouter.route("/me").get(verifyToken, getUserProfile)
-
+userRouter.route("/update").put(verifyToken, upload.single("profilePicture"), updateUserProfile);
 export default userRouter;

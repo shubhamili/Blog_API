@@ -198,7 +198,7 @@ const getUserPosts = async (req, res) => {
     try {
         const userId = req.user.id
         const posts = await Post.find({ author: userId }).populate("author", "userName email profilePicture").sort({ createdAt: -1 })
-        console.log("User posts fetched successfully", userId, posts);
+        // console.log("User posts fetched successfully", userId, posts);
 
         if (!posts) {
             return res.status(404).json({ message: "No posts found" });
