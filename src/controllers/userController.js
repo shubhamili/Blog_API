@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
 import { generateAccessToken, generateRefreshToken } from "../utils.js/jwt.js";
 import sanitizeHtml from "sanitize-html";
+import Follow from "../models/followModel.js";
 
 
 const registerUser = async (req, res) => {
@@ -105,7 +106,7 @@ const registerUser = async (req, res) => {
         console.error("error in controller", error)
     }
 
-}
+};
 
 const LoginUser = async (req, res) => {
     const { userName, password } = req.body;
@@ -181,7 +182,7 @@ const LoginUser = async (req, res) => {
     });
 
 
-}
+};
 
 const logoutUser = async (req, res) => {
     res.clearCookie("refreshToken", {
@@ -190,7 +191,7 @@ const logoutUser = async (req, res) => {
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     });
     return res.sendStatus(204);
-}
+};
 
 const refreshAccessToken = async (req, res) => {
     try {
@@ -398,6 +399,64 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+const FollowToggle = async (req, res) => {
+    try {
+        const userId = req.user.id; // my id
+        const { authorId } = req.params; // user's id
+        console.log(authorId, userId);
+
+        if (authorId.toString() === userId.toString()) {
+            return res.status(400).json({ message: "You cannot follow yourself" });
+        }
+
+        //check if both are string
+        // console.log(authorId.toString(), userId.toString());
+
+        const followExist = await Follow.findOne({ author: authorId, follower: userId })
+
+        if (followExist) {
+            const deleted = await Follow.findByIdAndDelete(followExist._id)
+            if (deleted) {
+                return res.status(200).json({ success: true, message: "unfollowed successfully.", data: deleted })
+            }
+        }
+
+        await Follow.create({ author: authorId, follower: userId });
+        res.status(200).json({ message: "Followed successfully" });
+    } catch (error) {
+        console.error("error in follow :", error)
+        return res.status(501).json({ success: false, message: error.message })
+    }
+};
+
+const getFollowers = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const someone = req.params.id
+        const followers = await Follow.find({ author: someone });
+
+        return res.status(200).json({ success: true, message: "follwers found.", data: followers })
+
+    } catch (error) {
+        console.error("error in getFollowers :", error)
+        return res.status(501).json({ success: false, message: error.message })
+    }
+};
+
+const getFollowing = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const someone = req.params.id
+        const following = await Follow.find({ follower: someone })
+
+        return res.status(200).json({ success: true, message: "follwing found.", data: following })
+
+    } catch (error) {
+        console.error("error in getFollowers :", error)
+        return res.status(501).json({ success: false, message: error.message })
+    }
+};
+
 
 export {
     registerUser,
@@ -405,5 +464,8 @@ export {
     logoutUser,
     getUserProfile,
     refreshAccessToken,
-    updateUserProfile
+    updateUserProfile,
+    FollowToggle,
+    getFollowers,
+    getFollowing
 }

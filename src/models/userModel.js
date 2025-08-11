@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema(
         },
         website: {
             type: String,
-        }
+        },
     },
     {
         timestamps: true
