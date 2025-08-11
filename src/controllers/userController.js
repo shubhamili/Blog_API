@@ -4,6 +4,7 @@ import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloud
 import { generateAccessToken, generateRefreshToken } from "../utils.js/jwt.js";
 import sanitizeHtml from "sanitize-html";
 import Follow from "../models/followModel.js";
+import sendEmail from "../utils.js/emailHelper.js";
 
 
 const registerUser = async (req, res) => {
@@ -63,6 +64,18 @@ const registerUser = async (req, res) => {
 
 
         const createdUser = await User.findById(user._id).select("-password")
+
+
+        if (createdUser) {
+            const html = `
+                        <h1>Welcome to Pustakalay, ${userName}!</h1>
+                        <p>We’re excited to have you join our community.</p>
+                        <p>Start exploring, following other users, and sharing your own content!</p>
+                        `;
+
+            await sendEmail(user.email, 'Welcome to Pustakalay!', html);
+        }
+
 
         if (!createdUser) {
             return res.status(400).json({
