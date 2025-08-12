@@ -5,6 +5,7 @@ import { generateAccessToken, generateRefreshToken } from "../utils.js/jwt.js";
 import sanitizeHtml from "sanitize-html";
 import Follow from "../models/followModel.js";
 import sendEmail from "../utils.js/emailHelper.js";
+import { Post } from "../models/postModel.js";
 
 
 const registerUser = async (req, res) => {
@@ -470,6 +471,52 @@ const getFollowing = async (req, res) => {
     }
 };
 
+const reqProfile = async (req, res) => {
+    try {
+        const { profileId } = req.params
+        if (!profileId) {
+            return res.status(204).json({
+                success: false,
+                message: "profile_id not found"
+            })
+        }
+
+        const profile = await User.findById(profileId);
+        console.log("profile is here =====> ", profile);
+        let posts = [];
+        if (!profile) {
+            res.status(204).json({
+                success: false,
+                message: "get profile fail!"
+            })
+        }
+        posts = await Post.find({ author: profile._id });
+
+        if (posts && posts.length <= 0) {
+            return res.status(200).json({
+                success: false,
+                message: "No posts available",
+                data: {
+                    userData: profile,
+                    userPosts: posts
+                }
+            })
+        }
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile fetched successfully!",
+            data: {
+                userData: profile,
+                userPosts: posts
+            }
+        })
+    } catch (error) {
+        console.error("error in getFollowers :", error)
+        return res.status(501).json({ success: false, message: error.message })
+    }
+}
 
 export {
     registerUser,
@@ -480,5 +527,6 @@ export {
     updateUserProfile,
     FollowToggle,
     getFollowers,
-    getFollowing
+    getFollowing,
+    reqProfile
 }

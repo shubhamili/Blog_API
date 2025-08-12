@@ -1,5 +1,5 @@
 import express from "express";
-import { FollowToggle, getFollowers, getFollowing, getUserProfile, LoginUser, logoutUser, refreshAccessToken, registerUser, updateUserProfile } from "../controllers/userController.js";
+import { FollowToggle, getFollowers, getFollowing, getUserProfile, LoginUser, logoutUser, refreshAccessToken, registerUser, reqProfile, updateUserProfile } from "../controllers/userController.js";
 import { upload } from "../middlewares/multerMiddleware.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 
@@ -16,5 +16,6 @@ userRouter.route("/update").put(verifyToken, upload.single("profilePicture"), up
 userRouter.route("/follow-toggle/:authorId").post(verifyToken, FollowToggle);
 userRouter.route("/getFollowers/:id").get(verifyToken, getFollowers);
 userRouter.route("/getFollowing/:id").get(verifyToken, getFollowing);
+userRouter.route("/profile/:profileId").get(verifyToken, reqProfile);
 
 export default userRouter;
