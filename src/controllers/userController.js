@@ -6,6 +6,7 @@ import sanitizeHtml from "sanitize-html";
 import Follow from "../models/followModel.js";
 import sendEmail from "../utils.js/emailHelper.js";
 import { Post } from "../models/postModel.js";
+import { createNotificationSerice } from "../utils.js/notificationService.js";
 
 
 const registerUser = async (req, res) => {
@@ -423,7 +424,6 @@ const FollowToggle = async (req, res) => {
             return res.status(400).json({ message: "You cannot follow yourself" });
         }
 
-        //check if both are string
         // console.log(authorId.toString(), userId.toString());
 
         const followExist = await Follow.findOne({ author: authorId, follower: userId })
@@ -431,11 +431,16 @@ const FollowToggle = async (req, res) => {
         if (followExist) {
             const deleted = await Follow.findByIdAndDelete(followExist._id)
             if (deleted) {
+
                 return res.status(200).json({ success: true, message: "unfollowed successfully.", data: deleted })
             }
         }
+        const followed = await Follow.create({ author: authorId, follower: userId });
 
-        await Follow.create({ author: authorId, follower: userId });
+        if (followed) {
+           await createNotificationSerice(authorId, userId, "Follow", `started following you.`)
+        }
+
         res.status(200).json({ message: "Followed successfully" });
     } catch (error) {
         console.error("error in follow :", error)
@@ -473,50 +478,44 @@ const getFollowing = async (req, res) => {
 
 const reqProfile = async (req, res) => {
     try {
-        const { profileId } = req.params
+        const { profileId } = req.params;
+
         if (!profileId) {
-            return res.status(204).json({
+            return res.status(400).json({
                 success: false,
-                message: "profile_id not found"
-            })
+                message: "profile_id is required"
+            });
         }
 
         const profile = await User.findById(profileId);
-        console.log("profile is here =====> ", profile);
-        let posts = [];
         if (!profile) {
-            res.status(204).json({
+            return res.status(404).json({
                 success: false,
-                message: "get profile fail!"
-            })
+                message: "Profile not found"
+            });
         }
-        posts = await Post.find({ author: profile._id });
 
-        if (posts && posts.length <= 0) {
+        const posts = await Post.find({ author: profile._id });
+
+        if (posts.length === 0) {
             return res.status(200).json({
                 success: false,
                 message: "No posts available",
-                data: {
-                    userData: profile,
-                    userPosts: posts
-                }
-            })
+                data: { userData: profile, userPosts: [] }
+            });
         }
-
 
         return res.status(200).json({
             success: true,
             message: "Profile fetched successfully!",
-            data: {
-                userData: profile,
-                userPosts: posts
-            }
-        })
+            data: { userData: profile, userPosts: posts }
+        });
     } catch (error) {
-        console.error("error in getFollowers :", error)
-        return res.status(501).json({ success: false, message: error.message })
+        console.error("Error in reqProfile:", error);
+        return res.status(500).json({ success: false, message: error.message });
     }
-}
+};
+
 
 export {
     registerUser,

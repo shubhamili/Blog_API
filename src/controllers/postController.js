@@ -1,8 +1,7 @@
-import path from "path";
-import fs from "fs";
 import { Post } from "../models/postModel.js";
 import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
 import mongoose from "mongoose";
+import { createNotificationSerice } from "../utils.js/notificationService.js";
 
 // const createPost = async (req, res, next) => {
 //     try {
@@ -115,7 +114,6 @@ const createPost = async (req, res, next) => {
         next(error);
     }
 };
-
 
 const getAllPosts = async (req, res, next) => {
     try {
@@ -374,12 +372,68 @@ const deletePost = async (req, res, next) => {
 };
 
 
+// const toggleLikePost = async (req, res, next) => {
+//     try {
+//         const { id } = req.params
+//         const userId = req.user.id
+
+//         const post = await Post.findById(id)
+//         if (!post) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Post not found",
+//                 data: null,
+//                 error: "PostNotFoundError",
+//             });
+//         }
+
+//         const Liked = post.likes.includes(userId);
+//         // if (Liked) {
+//         //     post.likes = post.likes.filter(SingleId => SingleId?.toString() !== userId?.toString())
+//         // } else {
+//         //     post.likes.push(userId)
+//         // }
+//         // await post.save();
+
+//         if (Liked) {
+//             await Post.updateOne(
+//                 { _id: post._id },
+//                 { $pull: { likes: userId } }
+//             );
+//         } else {
+//             const done = await Post.updateOne(
+//                 { _id: post._id },
+//                 { $addToSet: { likes: userId } } // prevents duplicates
+//             );
+//             if (done.modifiedCount > 0) {
+//                 await createNotificationService(
+//                     post.author,
+//                     userId,
+//                     "like",
+//                     "liked your post"
+//                 );
+
+//             }
+//         }
+
+
+//         return res.status(200).json({
+//             success: true,
+//             message: Liked ? "Post unliked successfully" : "Post liked successfully",
+//             totalLikes: post.likes.length,
+//             updatedPost: post,
+//         });
+//     } catch (error) {
+//         next(error)
+//     }
+// }
+
 const toggleLikePost = async (req, res, next) => {
     try {
-        const { id } = req.params
-        const userId = req.user.id
+        const { id } = req.params;
+        const userId = req.user.id;
 
-        const post = await Post.findById(id)
+        const post = await Post.findById(id);
         if (!post) {
             return res.status(404).json({
                 success: false,
@@ -389,23 +443,41 @@ const toggleLikePost = async (req, res, next) => {
             });
         }
 
-        const Liked = post.likes.includes(userId)
+        const Liked = post.likes.some(likeId => likeId.toString() === userId.toString());
+
         if (Liked) {
-            post.likes = post.likes.filter(SingleId => SingleId?.toString() !== userId?.toString())
+            await Post.updateOne({ _id: post._id }, { $pull: { likes: userId } });
         } else {
-            post.likes.push(userId)
+            const result = await Post.updateOne(
+                { _id: post._id },
+                { $addToSet: { likes: userId } }
+            );
+
+            if (result.modifiedCount > 0 && post.author.toString() !== userId.toString()) {
+                await createNotificationSerice(
+                    post.author,
+                    userId,
+                    "like",
+                    "liked your post"
+                );
+            }
         }
-        await post.save();
+
+        // Fetch updated post for accurate likes count
+        const updatedPost = await Post.findById(id).populate("author", "userName profilePicture");
+
         return res.status(200).json({
             success: true,
             message: Liked ? "Post unliked successfully" : "Post liked successfully",
-            totalLikes: post.likes.length,
-            updatedPost: post,
+            totalLikes: updatedPost.likes.length,
+            updatedPost
         });
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
+
+
 
 const addComment = async (req, res, next) => {
     try {
@@ -461,6 +533,16 @@ const addComment = async (req, res, next) => {
             );
         }
 
+        if (post.author.toString() !== userId.toString()) {
+            await createNotificationSerice(
+                post.author,
+                userId,
+                "comment",
+                "commented on your post"
+            );
+        }
+
+
         return res.status(201).json({
             success: true,
             comment: newComment, // or populate before returning
@@ -471,6 +553,71 @@ const addComment = async (req, res, next) => {
         next(error);
     }
 };
+
+
+// const addComment = async (req, res, next) => {
+//     try {
+//         const { id } = req.params; // postId
+//         const userId = req.user.id;
+//         const { comment } = req.body;
+
+//         if (!mongoose.Types.ObjectId.isValid(id)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid post ID",
+//                 error: "InvalidPostIdError",
+//             });
+//         }
+
+//         if (!comment?.trim()) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Comment cannot be empty",
+//                 error: "EmptyCommentError",
+//             });
+//         }
+
+//         const post = await Post.findById(id);
+//         if (!post) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Post not found",
+//                 error: "PostNotFoundError",
+//             });
+//         }
+
+//         const newComment = { user: userId, comment };
+//         post.comments.push(newComment);
+
+//         // Save and populate in one go
+//         const commentedPost = await (await post.save()).populate(
+//             "comments.user",
+//             "userName profilePicture email"
+//         );
+
+//         // Create notification if commenter is not the author
+//         if (post.author.toString() !== userId.toString()) {
+//             await createNotificationService(
+//                 post.author,
+//                 userId,
+//                 "comment",
+//                 "commented on your post"
+//             );
+//         }
+
+//         return res.status(201).json({
+//             success: true,
+//             message: "Comment added successfully",
+//             comment: newComment,
+//             totalComments: commentedPost.comments.length,
+//             updatedPost: commentedPost,
+//         });
+//     } catch (error) {
+//         next(error);
+//     }
+// };
+
+
 
 const totalPostbyEachUser = async (req, res, next) => {
     const PostCount = await Post.aggregate([
