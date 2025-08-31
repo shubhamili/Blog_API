@@ -6,7 +6,7 @@ This is a RESTful API for a blog platform where users can sign up, log in, creat
 
 ---
 ## API Endpoints
-![Project Screenshot](https://res.cloudinary.com/dycmay6eq/image/upload/v1746279831/gf1kxgdxcxvdjs482agz.png)
+![Project Screenshot](https://res.cloudinary.com/dycmay6eq/image/upload/v1756660961/Screenshot_2025-08-31_225047_v1zeww.png)
 
 ---
 
