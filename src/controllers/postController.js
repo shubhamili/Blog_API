@@ -191,7 +191,6 @@ const getSinglePost = async (req, res) => {
     }
 };
 
-
 const getUserPosts = async (req, res) => {
     try {
         const userId = req.user.id
@@ -218,8 +217,6 @@ const getUserPosts = async (req, res) => {
         )
     }
 }
-
-
 
 const updatePost = async (req, res, next) => {
     try {
@@ -309,10 +306,6 @@ const updatePost = async (req, res, next) => {
         next(error); // Let Express error handler take care
     }
 };
-
-
-
-
 
 //user only can delete his own post
 const deletePost = async (req, res, next) => {
@@ -478,7 +471,6 @@ const toggleLikePost = async (req, res, next) => {
 };
 
 
-
 const addComment = async (req, res, next) => {
     try {
         const { id } = req.params; // postId
@@ -553,70 +545,6 @@ const addComment = async (req, res, next) => {
         next(error);
     }
 };
-
-
-// const addComment = async (req, res, next) => {
-//     try {
-//         const { id } = req.params; // postId
-//         const userId = req.user.id;
-//         const { comment } = req.body;
-
-//         if (!mongoose.Types.ObjectId.isValid(id)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Invalid post ID",
-//                 error: "InvalidPostIdError",
-//             });
-//         }
-
-//         if (!comment?.trim()) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Comment cannot be empty",
-//                 error: "EmptyCommentError",
-//             });
-//         }
-
-//         const post = await Post.findById(id);
-//         if (!post) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Post not found",
-//                 error: "PostNotFoundError",
-//             });
-//         }
-
-//         const newComment = { user: userId, comment };
-//         post.comments.push(newComment);
-
-//         // Save and populate in one go
-//         const commentedPost = await (await post.save()).populate(
-//             "comments.user",
-//             "userName profilePicture email"
-//         );
-
-//         // Create notification if commenter is not the author
-//         if (post.author.toString() !== userId.toString()) {
-//             await createNotificationService(
-//                 post.author,
-//                 userId,
-//                 "comment",
-//                 "commented on your post"
-//             );
-//         }
-
-//         return res.status(201).json({
-//             success: true,
-//             message: "Comment added successfully",
-//             comment: newComment,
-//             totalComments: commentedPost.comments.length,
-//             updatedPost: commentedPost,
-//         });
-//     } catch (error) {
-//         next(error);
-//     }
-// };
-
 
 
 const totalPostbyEachUser = async (req, res, next) => {

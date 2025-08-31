@@ -7,6 +7,7 @@ import Follow from "../models/followModel.js";
 import sendEmail from "../utils.js/emailHelper.js";
 import { Post } from "../models/postModel.js";
 import { createNotificationSerice } from "../utils.js/notificationService.js";
+import { Notification } from "../models/notificationModel.js";
 
 
 const registerUser = async (req, res) => {
@@ -277,14 +278,20 @@ const getUserProfile = async (req, res, next) => {
 
         const { id, userName, email } = req.user;
 
-        const userNew = await User.findById(id);
+        const userDoc = await User.findById(id);
 
-        if (!userNew) {
+        if (!userDoc) {
             return res.status(404).json({
                 success: false,
                 message: "User not found",
             });
         }
+
+        const responseObj = {}
+
+        responseObj._id = userDoc._id;
+        responseObj.name = userDoc.userName;
+        responseObj.bio = userDoc.bio;
 
         const profilePicture = userNew.profilePicture || "";
 
@@ -431,30 +438,51 @@ const FollowToggle = async (req, res) => {
         if (followExist) {
             const deleted = await Follow.findByIdAndDelete(followExist._id)
             if (deleted) {
-
                 return res.status(200).json({ success: true, message: "unfollowed successfully.", data: deleted })
             }
         }
         const followed = await Follow.create({ author: authorId, follower: userId });
 
         if (followed) {
-           await createNotificationSerice(authorId, userId, "Follow", `started following you.`)
+            await createNotificationSerice(authorId, userId, "Follow", `started following you.`)
         }
 
-        res.status(200).json({ message: "Followed successfully" });
+        res.status(200).json({ success: true, message: "followed successfully.", data: followed });
     } catch (error) {
         console.error("error in follow :", error)
         return res.status(501).json({ success: false, message: error.message })
     }
 };
 
-const getFollowers = async (req, res) => {
+const getFollow = async (req, res) => {
     try {
-        const userId = req.user.id;
-        const someone = req.params.id
-        const followers = await Follow.find({ author: someone });
+        const thisUser = req.params.id
+        const [followers, following] = await Promise.all(
+            [
+                Follow.find({ author: thisUser }),
+                Follow.find({ follower: thisUser }),
+            ]
+        );
 
-        return res.status(200).json({ success: true, message: "follwers found.", data: followers })
+        if (!followers || !following) {
+            return res.status(400).json({ success: false, message: "not found" })
+        }
+
+        const followersCount = followers.length;
+        const followingCount = following.length;
+
+        return res.status(200).json
+            ({
+                success: true,
+                message: "follwers and following found.",
+                data: {
+                    followersCount,
+                    followingCount,
+                    followers,
+                    following
+
+                }
+            })
 
     } catch (error) {
         console.error("error in getFollowers :", error)
@@ -462,19 +490,17 @@ const getFollowers = async (req, res) => {
     }
 };
 
-const getFollowing = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const someone = req.params.id
-        const following = await Follow.find({ follower: someone })
-
-        return res.status(200).json({ success: true, message: "follwing found.", data: following })
-
-    } catch (error) {
-        console.error("error in getFollowers :", error)
-        return res.status(501).json({ success: false, message: error.message })
-    }
-};
+// const getFollowing = async (req, res) => {
+//     try {
+//         // const userId = req.user.id;
+//         const someone = req.params.id
+//         const following = await Follow.find({ follower: someone })
+//         return res.status(200).json({ success: true, message: "follwing found.", data: following })
+//     } catch (error) {
+//         console.error("error in getFollowers :", error)
+//         return res.status(501).json({ success: false, message: error.message })
+//     }
+// };
 
 const reqProfile = async (req, res) => {
     try {
@@ -496,25 +522,68 @@ const reqProfile = async (req, res) => {
         }
 
         const posts = await Post.find({ author: profile._id });
+        const followers = await Follow.find({ author: profile._id });
+        const followersCount = await Follow.countDocuments({ author: profile._id });
+        const followingCount = await Follow.countDocuments({ follower: profile._id });
+        const following = await Follow.find({ follower: profile._id });
+
+
 
         if (posts.length === 0) {
             return res.status(200).json({
                 success: false,
-                message: "No posts available",
-                data: { userData: profile, userPosts: [] }
+                message: "some data or whole data not found!",
+                data: {
+                    userData: profile
+                }
             });
         }
 
         return res.status(200).json({
             success: true,
             message: "Profile fetched successfully!",
-            data: { userData: profile, userPosts: posts }
+            data: {
+                followersCount,
+                followingCount,
+                followers,
+                following,
+                userData: profile,
+                userPosts: posts,
+
+            }
         });
     } catch (error) {
         console.error("Error in reqProfile:", error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+
+const getMyNotifications = async (req, res) => {
+    try {
+        const myId = req.user.id;
+        const myNotifications = await Notification
+            .find({ recipient: myId })
+            .populate("recipient", "userName")
+            .populate("sender", "userName")
+            .lean()
+
+        let notificationData = myNotifications.map((not) =>
+            `${not.recipient.userName} ${not.type} ${not.message}`
+        )
+
+        console.log("my noftification =", notificationData);
+        return res.status(200).json({
+            success: true,
+            message: "got all nototfications",
+            data: notificationData
+        });
+
+    } catch (error) {
+        console.error("error in notification :", error.message)
+    }
+}
 
 
 export {
@@ -525,7 +594,7 @@ export {
     refreshAccessToken,
     updateUserProfile,
     FollowToggle,
-    getFollowers,
-    getFollowing,
-    reqProfile
+    getFollow,
+    reqProfile,
+    getMyNotifications
 }

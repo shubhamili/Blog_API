@@ -1,5 +1,5 @@
 import express from "express";
-import { FollowToggle, getFollowers, getFollowing, getUserProfile, LoginUser, logoutUser, refreshAccessToken, registerUser, reqProfile, updateUserProfile } from "../controllers/userController.js";
+import { FollowToggle, getFollow, getMyNotifications, getUserProfile, LoginUser, logoutUser, refreshAccessToken, registerUser, reqProfile, updateUserProfile } from "../controllers/userController.js";
 import { upload } from "../middlewares/multerMiddleware.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 
@@ -11,11 +11,17 @@ userRouter.route("/refreshAccessToken").get(refreshAccessToken);
 
 //protect routes
 userRouter.route("/logout").post(verifyToken, logoutUser);
+
 userRouter.route("/me").get(verifyToken, getUserProfile);
+
 userRouter.route("/update").put(verifyToken, upload.single("profilePicture"), updateUserProfile);
+
 userRouter.route("/follow-toggle/:authorId").post(verifyToken, FollowToggle);
-userRouter.route("/getFollowers/:id").get(verifyToken, getFollowers);
-userRouter.route("/getFollowing/:id").get(verifyToken, getFollowing);
+
+userRouter.route("/getFollow/:id").get(verifyToken, getFollow);
+
 userRouter.route("/profile/:profileId").get(verifyToken, reqProfile);
+
+userRouter.route("/notification").get(verifyToken, getMyNotifications);
 
 export default userRouter;
