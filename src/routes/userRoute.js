@@ -2,12 +2,13 @@ import express from "express";
 import { FollowToggle, getFollow, getMyNotifications, getUserProfile, LoginUser, logoutUser, refreshAccessToken, registerUser, reqProfile, updateUserProfile } from "../controllers/userController.js";
 import { upload } from "../middlewares/multerMiddleware.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
+import { loginLimiter } from "../utils.js/rateLimiter.js";
 
 const userRouter = express.Router();
 
 userRouter.route("/register").post(upload.single("profilePicture"), registerUser);
-userRouter.route("/login").post(LoginUser);
-userRouter.route("/refreshAccessToken").get(refreshAccessToken);
+userRouter.route("/login").post(loginLimiter, LoginUser);
+userRouter.route("/refreshAccessToken").get(loginLimiter, refreshAccessToken);
 
 //protect routes
 userRouter.route("/logout").post(verifyToken, logoutUser);

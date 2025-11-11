@@ -9,6 +9,7 @@ import { ConnectDB } from "./src/db/db.js";
 import userRouter from "./src/routes/userRoute.js";
 import cookieParser from "cookie-parser";
 import postRouter from "./src/routes/postRoute.js";
+import { basicLimiter } from "./src/utils.js/rateLimiter.js";
 
 //13-08-2025 all .js files total lines are => 1621
 
@@ -19,8 +20,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+
+//basic limiter for all routes
+app.use(basicLimiter)
+
+
 ConnectDB().then((req, res) => {
-    console.log("DB connected..");
+    console.log("DB connected");
     app.listen(PORT, () => {
         console.log(`Server is running on port http://localhost:${PORT}`);
     })
@@ -44,7 +50,7 @@ app.get("/", (req, res) => {
 
 app.use(cors({
     origin: [
-        "http://localhost:5173"
+        "http://localhost:5174"
     ],
     credentials: true,
 }));
