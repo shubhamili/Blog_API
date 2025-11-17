@@ -118,7 +118,7 @@ const createPost = async (req, res, next) => {
 const getAllPosts = async (req, res, next) => {
     try {
         let page = Number(req.query.page) || 1;
-        let limit = Number(req.query.limit) || 10;
+        let limit = Number(req.query.limit) || 100;
 
         if (!page || !limit) {
             return res.status(400).json({ message: "page and limit are required" });
