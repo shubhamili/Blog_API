@@ -2,59 +2,10 @@ import { Post } from "../models/postModel.js";
 import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloudinary.js";
 import mongoose from "mongoose";
 import { createNotificationSerice } from "../utils.js/notificationService.js";
-
-// const createPost = async (req, res, next) => {
-//     try {
-//         const { content } = req.body
-//         const userId = req.user.id
-//         const postPicture = req.file.path
-
-//         if (!userId) {
-//             return res.status(401).json({ message: "Unauthorized" });
-//         }
-//         if (!content) {
-//             return res.status(400).json({ message: "content field is required" });
-//         }
-//         let postPicCloud = null;
-//         console.log("Post picture path:", postPicture);
-
-//         if (postPicture && postPicture !== "null") {
-//             try {
-//                 postPicCloud = await uploadOnCloudinary(postPicture);
-//             } catch (err) {
-//                 return res.status(500).json({
-//                     success: false,
-//                     message: "Error uploading image",
-//                     error: err.message || "Cloudinary upload failed",
-//                 });
-//             }
-//         }
-//         console.log("Post picture uploaded to Cloudinary:", postPicCloud);
+import redisClient from "../config/redis.js";
+import { json } from "express";
 
 
-//         const newPost = await Post.create({
-//             author: userId,
-//             content,
-//             postPicture: postPicCloud.secure_url || null,
-//             postPicturePublicID: postPicCloud.public_id || null,
-//         })
-
-//         if (!newPost) {
-//             return res.status(400).json({ message: "failed to create post!" });
-//         }
-
-//         return res.status(201).json(
-//             {
-//                 success: true,
-//                 message: "Post created successfully",
-//                 data: newPost,
-//             }
-//         )
-
-//     } catch (error) {
-//         next(error)
-//     }
-// }
 
 const createPost = async (req, res, next) => {
     try {
@@ -115,20 +66,91 @@ const createPost = async (req, res, next) => {
     }
 };
 
+
+//tried
+// const getAllPosts = async (req, res, next) => {
+//     try {
+//         let page = Number(req.query.page) || 1;
+//         let limit = Number(req.query.limit) || 100;
+//         if (!page || !limit) {
+//             return res.status(400).json({ message: "page and limit are required" });
+//         }
+//         if (page < 1 || limit < 1) {
+//             return res.status(400).json({ message: "page and limit should be greater than 0" });
+//         }
+//         const cachedPosts = await redisClient.get("all_posts");
+//         if (cachedPosts) {
+//             console.log("cachedPosts", cachedPosts.length);
+//             return res.status(200).json({
+//                 totalPosts: total,
+//                 currentPage: page,
+//                 totalPages: Math.ceil(total / limit),
+//                 postsPerPage: limit,
+//                 posts,
+//             });
+//         }
+//         let skip = (page - 1) * limit;
+//         const total = await Post.countDocuments();
+//         const posts = await Post.find({})
+//             .skip(skip)
+//             .limit(limit)
+//             .populate("author", "userName email profilePicture")
+//             .sort({ createdAt: -1 });
+//         await redisClient.setEx("all_posts", 60, JSON.stringify(posts));
+
+//         if (!posts || posts.length === 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "No posts found",
+//                 data: null,
+//                 error: "NoPostsFoundError",
+//             });
+//         }
+//         return res.status(200).json({
+//             totalPosts: total,
+//             currentPage: page,
+//             totalPages: Math.ceil(total / limit),
+//             postsPerPage: limit,
+//             posts,
+//         });
+//     } catch (error) {
+//         next(error);
+//     }
+// }
+
+
+// added caching 
 const getAllPosts = async (req, res, next) => {
     try {
         let page = Number(req.query.page) || 1;
-        let limit = Number(req.query.limit) || 100;
+        let limit = Number(req.query.limit) || 10;
 
-        if (!page || !limit) {
-            return res.status(400).json({ message: "page and limit are required" });
-        }
         if (page < 1 || limit < 1) {
-            return res.status(400).json({ message: "page and limit should be greater than 0" });
+            return res.status(400).json({
+                success: false,
+                message: "Page and limit must be greater than 0",
+                data: null,
+            });
         }
 
-        let skip = (page - 1) * limit;
-        const total = await Post.countDocuments();
+        const cacheKey = `posts:page=${page}:limit=${limit}`;
+
+        // 📌 Check Redis cache
+        const cachedData = await redisClient.get(cacheKey);
+
+        if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            return res.status(200).json({
+                success: true,
+                message: "Posts fetched successfully (from cache)",
+                ...parsed,
+            });
+        }
+
+        const skip = (page - 1) * limit;
+
+        const totalPosts = await Post.countDocuments();
+
         const posts = await Post.find({})
             .skip(skip)
             .limit(limit)
@@ -140,56 +162,86 @@ const getAllPosts = async (req, res, next) => {
                 success: false,
                 message: "No posts found",
                 data: null,
-                error: "NoPostsFoundError",
             });
         }
 
-        return res.status(200).json({
-            totalPosts: total,
+        const responseData = {
+            totalPosts,
             currentPage: page,
-            totalPages: Math.ceil(total / limit),
+            totalPages: Math.ceil(totalPosts / limit),
             postsPerPage: limit,
             posts,
+        };
+
+        //  Cache result for 60s
+        await redisClient.setEx(cacheKey, 60, JSON.stringify(responseData));
+
+        return res.status(200).json({
+            success: true,
+            message: "Posts fetched successfully",
+            ...responseData,
         });
+
     } catch (error) {
         next(error);
     }
+};
 
-
-}
 const getSinglePost = async (req, res) => {
     try {
         const { id } = req.params;
 
+        if (!id || id.length !== 24) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Post ID",
+            });
+        }
+
+        const cacheKey = `posts:${id}`;
+
+        const cachedPost = await redisClient.get(cacheKey);
+
+        if (cachedPost) {
+            return res.status(200).json({
+                success: true,
+                message: "Post fetched successfully (from cache)",
+                data: JSON.parse(cachedPost),
+            });
+        }
+
         const post = await Post.findById(id)
+            .lean()
             .populate("author", "userName email profilePicture")
             .populate({
                 path: "comments.user",
-                select: "userName profilePicture",
-            })
-
+                select: "userName profilePicture"
+            });
 
         if (!post) {
-            return res.status(404).json({ message: "Post not found" });
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
         }
 
-        return res.status(200).json(
-            {
-                success: true,
-                message: "Post fetched successfully",
-                data: post,
-            }
-        );
+        await redisClient.setEx(cacheKey, 120, JSON.stringify(post));
+
+        return res.status(200).json({
+            success: true,
+            message: "Post fetched successfully",
+            data: post,
+        });
+
     } catch (error) {
-        return res.status(500).json(
-            {
-                success: false,
-                message: "Internal server error",
-                error: error.message || "Something went wrong"
-            }
-        );
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
     }
 };
+
 
 const getUserPosts = async (req, res) => {
     try {

@@ -5,12 +5,12 @@ dotenv.config({
 })
 import express from "express";
 import cors from "cors";
-import { ConnectDB } from "./src/db/db.js";
 import userRouter from "./src/routes/userRoute.js";
 import cookieParser from "cookie-parser";
 import postRouter from "./src/routes/postRoute.js";
 import { basicLimiter } from "./src/utils.js/rateLimiter.js";
 import morgan from "morgan";
+import { ConnectDB } from "./src/config/dbConfig.js";
 
 //13-08-2025 all .js files total lines are => 1621
 
