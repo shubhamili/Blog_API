@@ -3,7 +3,6 @@ import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloud
 import mongoose from "mongoose";
 import { createNotificationSerice } from "../utils.js/notificationService.js";
 import redisClient from "../config/redis.js";
-import { json } from "express";
 
 
 
@@ -48,6 +47,15 @@ const createPost = async (req, res, next) => {
             postPicturePublicID: postPicCloud?.public_id || null,
         });
 
+        // this becomes very expensive
+        // const listKeys = await redisClient.keys("posts:page=*");
+        // if (listKeys.length > 0) await redisClient.del(listKeys);
+
+
+        // so we can just delete the first page cause thats wahat most people use 
+        await redisClient.del("posts:page=1:limit=10");
+
+
         if (!newPost) {
             return res.status(400).json({
                 success: false,
@@ -67,59 +75,6 @@ const createPost = async (req, res, next) => {
 };
 
 
-//tried
-// const getAllPosts = async (req, res, next) => {
-//     try {
-//         let page = Number(req.query.page) || 1;
-//         let limit = Number(req.query.limit) || 100;
-//         if (!page || !limit) {
-//             return res.status(400).json({ message: "page and limit are required" });
-//         }
-//         if (page < 1 || limit < 1) {
-//             return res.status(400).json({ message: "page and limit should be greater than 0" });
-//         }
-//         const cachedPosts = await redisClient.get("all_posts");
-//         if (cachedPosts) {
-//             console.log("cachedPosts", cachedPosts.length);
-//             return res.status(200).json({
-//                 totalPosts: total,
-//                 currentPage: page,
-//                 totalPages: Math.ceil(total / limit),
-//                 postsPerPage: limit,
-//                 posts,
-//             });
-//         }
-//         let skip = (page - 1) * limit;
-//         const total = await Post.countDocuments();
-//         const posts = await Post.find({})
-//             .skip(skip)
-//             .limit(limit)
-//             .populate("author", "userName email profilePicture")
-//             .sort({ createdAt: -1 });
-//         await redisClient.setEx("all_posts", 60, JSON.stringify(posts));
-
-//         if (!posts || posts.length === 0) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "No posts found",
-//                 data: null,
-//                 error: "NoPostsFoundError",
-//             });
-//         }
-//         return res.status(200).json({
-//             totalPosts: total,
-//             currentPage: page,
-//             totalPages: Math.ceil(total / limit),
-//             postsPerPage: limit,
-//             posts,
-//         });
-//     } catch (error) {
-//         next(error);
-//     }
-// }
-
-
-// added caching 
 const getAllPosts = async (req, res, next) => {
     try {
         let page = Number(req.query.page) || 1;
@@ -186,6 +141,7 @@ const getAllPosts = async (req, res, next) => {
         next(error);
     }
 };
+
 
 const getSinglePost = async (req, res) => {
     try {
@@ -276,6 +232,19 @@ const updatePost = async (req, res, next) => {
         const { content } = req.body;
         const userId = req.user.id;
 
+        // Redis invalidation: remove single post cache
+        const cacheKey = `posts:${id}`;
+        await redisClient.del(cacheKey)
+
+        // i have ttl in cache still
+        // const listKeys = await redisClient.keys("posts:page=*");
+        // if (listKeys.length > 0) await redisClient.del(listKeys)
+
+
+        await redisClient.del("posts:page=1:limit=10");
+
+
+
         // Check if image was uploaded
         const postPicture = req.file?.path || null;
         console.log("Post picture path:", postPicture);
@@ -359,11 +328,12 @@ const updatePost = async (req, res, next) => {
     }
 };
 
-//user only can delete his own post
 const deletePost = async (req, res, next) => {
     try {
         const { id } = req.params;
         const userID = req.user.id;
+
+
 
         const postToBeDeleted = await Post.findById(id);
 
@@ -376,6 +346,13 @@ const deletePost = async (req, res, next) => {
             });
         }
 
+        // const cacheKey = `posts:${id}`;
+        // await redisClient.del(cacheKey)
+
+
+        await redisClient.del("posts:page=1:limit=10");
+
+
         if (postToBeDeleted.author.toString() !== userID.toString()) {
             return res.status(403).json({
                 success: false,
@@ -386,6 +363,12 @@ const deletePost = async (req, res, next) => {
         }
 
         const deletedPost = await Post.deleteOne({ _id: id });
+
+        // Redis: delete paginated lists
+        const listKeys = await redisClient.keys("posts:page=*");
+        if (listKeys.length > 0) await redisClient.del(listKeys);
+
+
 
         if (!deletedPost || deletedPost.deletedCount === 0) {
             return res.status(404).json({

@@ -8,6 +8,7 @@ import sendEmail from "../utils.js/emailHelper.js";
 import { Post } from "../models/postModel.js";
 import { createNotificationSerice } from "../utils.js/notificationService.js";
 import { Notification } from "../models/notificationModel.js";
+import redisClient from "../config/redis.js";
 
 
 const registerUser = async (req, res) => {
@@ -124,6 +125,7 @@ const registerUser = async (req, res) => {
 
 };
 
+
 const LoginUser = async (req, res) => {
     const { userName, password } = req.body;
 
@@ -200,6 +202,7 @@ const LoginUser = async (req, res) => {
 
 };
 
+
 const logoutUser = async (req, res) => {
     res.clearCookie("refreshToken", {
         httpOnly: true,
@@ -208,6 +211,7 @@ const logoutUser = async (req, res) => {
     });
     return res.sendStatus(204);
 };
+
 
 const refreshAccessToken = async (req, res) => {
     try {
@@ -267,6 +271,7 @@ const refreshAccessToken = async (req, res) => {
     }
 };
 
+
 const getUserProfile = async (req, res, next) => {
     try {
         if (!req.user) {
@@ -277,6 +282,13 @@ const getUserProfile = async (req, res, next) => {
         }
 
         const { id, userName, email } = req.user;
+
+        // const cacheKey = `User:${id}`;
+        // const cachedData = await redisClient.get(cacheKey);
+
+        // if (cachedData) {
+            
+        // }
 
         const userDoc = await User.findById(id);
 
@@ -304,6 +316,7 @@ const getUserProfile = async (req, res, next) => {
         next(error);
     }
 };
+
 
 const updateUserProfile = async (req, res) => {
     try {
@@ -421,6 +434,7 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+
 const FollowToggle = async (req, res) => {
     try {
         const userId = req.user.id; // my id
@@ -453,6 +467,7 @@ const FollowToggle = async (req, res) => {
         return res.status(501).json({ success: false, message: error.message })
     }
 };
+
 
 const getFollow = async (req, res) => {
     try {
@@ -501,6 +516,7 @@ const getFollow = async (req, res) => {
 //         return res.status(501).json({ success: false, message: error.message })
 //     }
 // };
+
 
 const reqProfile = async (req, res) => {
     try {
@@ -557,7 +573,6 @@ const reqProfile = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-
 
 
 const getMyNotifications = async (req, res) => {

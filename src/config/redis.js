@@ -20,7 +20,9 @@ redisClient.on("error", (err) => {
 //     await redisClient.connect();
 // })();
 
-await redisClient.connect();
+await redisClient.connect().then(() => {
+    console.log("connected redis", redisClient);
+});
 
 export default redisClient;
 
