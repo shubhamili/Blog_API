@@ -1,8 +1,9 @@
-import redisClient from "../config/redis";
-import { Notification } from "../models/notificationModel";
+import redisClient from "../config/redis.js";
+import { Notification } from "../models/notificationModel.js";
 
 export async function notificationWorker() {
     console.log("notification worker started...");
+
 
     while (true) {
         try {
@@ -22,13 +23,15 @@ export async function notificationWorker() {
                 message: parsedData.Message
             })
 
+            // await Notification.insertMany
+
             console.log("result", result);
 
 
 
 
         } catch (error) {
-            console.error("❌ Worker error:", err);
+            console.error(" Worker error:", error);
 
             // optional error queue
             // await redisClient.lPush("notification_error_queue", JSON.stringify({
