@@ -287,7 +287,7 @@ const getUserProfile = async (req, res, next) => {
         // const cachedData = await redisClient.get(cacheKey);
 
         // if (cachedData) {
-            
+
         // }
 
         const userDoc = await User.findById(id);
@@ -439,7 +439,7 @@ const FollowToggle = async (req, res) => {
     try {
         const userId = req.user.id; // my id
         const { authorId } = req.params; // user's id
-        console.log(authorId, userId);
+        // console.log(authorId, userId);
 
         if (authorId.toString() === userId.toString()) {
             return res.status(400).json({ message: "You cannot follow yourself" });
@@ -458,9 +458,22 @@ const FollowToggle = async (req, res) => {
         const followed = await Follow.create({ author: authorId, follower: userId });
 
         if (followed) {
-            await createNotificationSerice(authorId, userId, "Follow", `started following you.`)
-        }
 
+            // await createNotificationSerice(authorId, userId, "Follow", `started following you.`)
+
+
+            const notificationPayload = {
+                senderId: userId,
+                recipientIds: [authorId],
+                Action: "Follow",
+                Message: "Started following you!"
+            }
+
+            await redisClient.lPush("notification_queue", JSON.stringify(notificationPayload));
+
+
+
+        }
         res.status(200).json({ success: true, message: "followed successfully.", data: followed });
     } catch (error) {
         console.error("error in follow :", error)

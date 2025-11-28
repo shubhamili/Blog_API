@@ -3,6 +3,7 @@ import { deleteImageFromCloudinary, uploadOnCloudinary } from "../utils.js/cloud
 import mongoose from "mongoose";
 import { createNotificationSerice } from "../utils.js/notificationService.js";
 import redisClient from "../config/redis.js";
+import Follow from "../models/followModel.js";
 
 
 
@@ -62,6 +63,31 @@ const createPost = async (req, res, next) => {
                 message: "Failed to create post",
             });
         }
+
+        const followers = await Follow.find({
+            author: userId
+        });
+
+        console.log("followers", followers);
+
+        const arrF = [];
+
+        followers.forEach((f) => {
+            arrF.push(f.follower)
+        })
+
+        console.log("arrF", arrF);
+
+        const noftificationPayload = {
+            senderId: userId,
+            recipientIds: arrF,
+            Action: "Posted",
+            Message: "Published a Post!"
+        }
+
+        const result = await redisClient.lPush("notification_queue", JSON.stringify(noftificationPayload));
+
+        console.log("result", result);
 
         return res.status(201).json({
             success: true,
@@ -461,7 +487,7 @@ const toggleLikePost = async (req, res, next) => {
         const { id } = req.params;
         const userId = req.user.id;
 
-        const post = await Post.findById(id);
+        const post = await Post.findById(id).populate('author');
         if (!post) {
             return res.status(404).json({
                 success: false,
@@ -470,8 +496,9 @@ const toggleLikePost = async (req, res, next) => {
                 error: "PostNotFoundError",
             });
         }
-
+        //expensive ops will optimize it
         const Liked = post.likes.some(likeId => likeId.toString() === userId.toString());
+        const authorId = post.author._id
 
         if (Liked) {
             await Post.updateOne({ _id: post._id }, { $pull: { likes: userId } });
@@ -482,12 +509,25 @@ const toggleLikePost = async (req, res, next) => {
             );
 
             if (result.modifiedCount > 0 && post.author.toString() !== userId.toString()) {
-                await createNotificationSerice(
-                    post.author,
-                    userId,
-                    "like",
-                    "liked your post"
-                );
+                // await createNotificationSerice(
+                //     post.author,
+                //     userId,
+                //     "like",
+                //     "liked your post"
+                // );
+
+
+                const noftificationPayload = {
+                    senderId: userId,
+                    recipientIds: [authorId],
+                    Action: "Like",
+                    Message: "Liked your post!"
+                }
+
+                await redisClient.lPush("notification_queue", JSON.stringify(noftificationPayload));
+
+
+
             }
         }
 
@@ -561,12 +601,23 @@ const addComment = async (req, res, next) => {
         }
 
         if (post.author.toString() !== userId.toString()) {
-            await createNotificationSerice(
-                post.author,
-                userId,
-                "comment",
-                "commented on your post"
-            );
+            // await createNotificationSerice(
+            //     post.author,
+            //     userId,
+            //     "comment",
+            //     "commented on your post"
+            // );
+
+            const authorId = post.author;
+            const noftificationPayload = {
+                senderId: userId,
+                recipientIds: [authorId],
+                Action: "Comment",
+                Message: "Commented your post!"
+            }
+
+            await redisClient.lPush("notification_queue", JSON.stringify(noftificationPayload));
+
         }
 
 
