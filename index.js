@@ -11,11 +11,19 @@ import postRouter from "./src/routes/postRoute.js";
 import { basicLimiter } from "./src/utils.js/rateLimiter.js";
 import morgan from "morgan";
 import { ConnectDB } from "./src/config/dbConfig.js";
-
+import http from "http";
+import { initSocket } from "./src/socket/index.js";
+import internalRoutes from './src/routes/internal.js'
 //13-08-2025 all .js files total lines are => 1621
 
 const app = express();
 const PORT = process.env.PORT;
+
+
+
+const server = http.createServer(app);
+
+const io = initSocket(server);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -23,17 +31,24 @@ app.use(cookieParser());
 app.use(morgan("dev"))
 
 //basic limiter for all routes
-app.use(basicLimiter)
+// app.use(basicLimiter)
 
 
 ConnectDB().then((req, res) => {
     console.log("DB connected");
-    app.listen(PORT, () => {
-        console.log(`Server is running on port http://localhost:${PORT}`);
-    })
+    // app.listen(PORT, () => {
+    //     console.log(`Server is running on port http://localhost:${PORT}`);
+    // })
 }).catch((error) => {
     console.error("Error connecting to MongoDB:", error);
 });
+
+
+
+server.listen(PORT, () => {
+    console.log(`Server & Socket running on port http://localhost:${PORT}`);
+});
+
 
 app.get("/", (req, res) => {
     res.status(200).json({
@@ -59,7 +74,7 @@ app.use(cors({
 //routes
 app.use("/api/user", userRouter)
 app.use("/api/post", postRouter)
-
+app.use("/internal", internalRoutes);
 
 //error handle
 app.use((err, req, res, next) => {

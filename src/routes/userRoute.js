@@ -7,8 +7,10 @@ import { loginLimiter } from "../utils.js/rateLimiter.js";
 const userRouter = express.Router();
 
 userRouter.route("/register").post(upload.single("profilePicture"), registerUser);
-userRouter.route("/login").post(loginLimiter, LoginUser);
-userRouter.route("/refreshAccessToken").get(loginLimiter, refreshAccessToken);
+userRouter.route("/login").post(LoginUser);
+// userRouter.route("/login").post(loginLimiter, LoginUser);
+userRouter.route("/refreshAccessToken").get(refreshAccessToken);
+// userRouter.route("/refreshAccessToken").get(loginLimiter, refreshAccessToken);
 
 //protect routes
 userRouter.route("/logout").post(verifyToken, logoutUser);

@@ -13,7 +13,10 @@ ConnectDB().then((req, res) => {
 
 
 console.log("here",);
-notificationWorker()
+notificationWorker().catch(err => {
+    console.error("Worker crashed", err);
+    process.exit(1);
+});
 
 // have to run this in seperate terminal    
 

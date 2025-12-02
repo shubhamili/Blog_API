@@ -1,0 +1,29 @@
+// src/controllers/internalController.js
+import { getIO } from "../socket/index.js";
+
+export const emitNotification = (req, res) => {
+    const internalKey = req.headers["x-internal-key"];
+    if (internalKey !== process.env.INTERNAL_API_KEY) {
+        return res.status(401).json({ ok: false, message: "Unauthorized" });
+    }
+
+    const { notification } = req.body;
+    if (!notification) return res.status(400).json({ ok: false, message: "No notification payload" });
+
+    try {
+        const io = getIO();
+        // notification can be a single doc or an array
+        const recipients = Array.isArray(notification)
+            ? notification.map(n => n.recipientId)
+            : [notification.recipientId];
+
+        recipients.forEach((id) => {
+            io.to(id).emit("new-notification", notification);
+        });
+
+        return res.status(200).json({ ok: true });
+    } catch (err) {
+        console.error("Emit error:", err);
+        return res.status(500).json({ ok: false, message: err.message });
+    }
+};

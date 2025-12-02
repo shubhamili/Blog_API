@@ -1,5 +1,11 @@
+import axios from "axios";
 import redisClient from "../config/redis.js";
 import { Notification } from "../models/notificationModel.js";
+
+const INTERNAL_EMIT_URL = process.env.INTERNAL_EMIT_URL;
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
+
+
 
 export async function notificationWorker() {
     console.log("notification worker started...");
@@ -29,6 +35,12 @@ export async function notificationWorker() {
 
 
 
+            await axios.post(
+                INTERNAL_EMIT_URL,
+                { notification: result.length === 1 ? result[0] : result },
+                { headers: { "x-internal-key": INTERNAL_API_KEY } }
+            );
+
 
         } catch (error) {
             console.error(" Worker error:", error);
@@ -40,8 +52,6 @@ export async function notificationWorker() {
             // }));
         }
     }
-
-
 
 }
 
