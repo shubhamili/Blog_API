@@ -16,6 +16,8 @@ export function initSocket(server) {
     io.on("connection", (socket) => {
         const { userId } = socket.handshake.query;
 
+        console.log("userId", userId);
+
         if (userId) {
             socket.join(userId);
             console.log("socket joined room", userId);

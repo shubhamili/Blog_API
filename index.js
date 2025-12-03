@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-
 dotenv.config({
     path: './.env'
 })
@@ -14,7 +13,8 @@ import { ConnectDB } from "./src/config/dbConfig.js";
 import http from "http";
 import { initSocket } from "./src/socket/index.js";
 import internalRoutes from './src/routes/internal.js'
-//13-08-2025 all .js files total lines are => 1621
+
+
 
 const app = express();
 const PORT = process.env.PORT;
@@ -28,7 +28,7 @@ const io = initSocket(server);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(morgan("dev"))
+// app.use(morgan("dev"))
 
 //basic limiter for all routes
 // app.use(basicLimiter)

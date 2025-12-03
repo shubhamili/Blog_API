@@ -31,15 +31,19 @@ export async function notificationWorker() {
 
             // await Notification.insertMany
 
-            console.log("result", result);
+            console.log("resulted db dataa added: ", result);
+
+            if (result) {
+                await axios.post(
+                    INTERNAL_EMIT_URL,
+                    { notification: result.length > 1 ? result[0] : result },
+                    { headers: { "x-internal-key": INTERNAL_API_KEY } }
+                );
+            }
 
 
 
-            await axios.post(
-                INTERNAL_EMIT_URL,
-                { notification: result.length === 1 ? result[0] : result },
-                { headers: { "x-internal-key": INTERNAL_API_KEY } }
-            );
+            console.log("log after axios post",);
 
 
         } catch (error) {

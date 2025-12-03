@@ -1,4 +1,3 @@
-// src/routes/internal.js
 import express from "express";
 import { emitNotification } from "../controllers/internalController.js";
 
