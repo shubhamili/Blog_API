@@ -168,6 +168,7 @@ const LoginUser = async (req, res) => {
             error: "UserNotFoundError",
         });
     }
+
     //authentication token
     const refreshToken = generateRefreshToken(loggedInUser)
     const accessToken = generateAccessToken(loggedInUser)

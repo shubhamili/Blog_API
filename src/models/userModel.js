@@ -15,7 +15,16 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type: String,
-            required: true
+            required: function () {
+                return !this.isGoogleUser;
+            }
+        },
+        isGoogleUser: {
+            type: Boolean,
+            require: true
+        },
+        googleId: {
+            type: String
         },
         profilePicture: {
             type: String,
@@ -32,6 +41,7 @@ const userSchema = new mongoose.Schema(
         website: {
             type: String,
         },
+
     },
     {
         timestamps: true
@@ -40,14 +50,16 @@ const userSchema = new mongoose.Schema(
 
 
 userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next() // no !==>  yes  || yes no 
-    this.password = await bcrypt.hash(this.password, 8)
+    if (!this.isModified("password")) return next()
+    if (this.isGoogleUser) return next();
+    this.password = bcrypt.hash(this.password, 8)
     next()
 })
 
 
 userSchema.methods.isPasswordCorrect =
     async function (password) {
+        if (this.isGoogleUser) return false;
         return await bcrypt.compare(password, this.password)
     }
 

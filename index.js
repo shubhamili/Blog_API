@@ -13,6 +13,7 @@ import { ConnectDB } from "./src/config/dbConfig.js";
 import http from "http";
 import { initSocket } from "./src/socket/index.js";
 import internalRoutes from './src/routes/internal.js'
+import googleRoute from "./src/routes/googleAuthRoute.js";
 
 
 
@@ -75,6 +76,7 @@ app.use(cors({
 app.use("/api/user", userRouter)
 app.use("/api/post", postRouter)
 app.use("/internal", internalRoutes);
+app.use('/api/google', googleRoute)
 
 //error handle
 app.use((err, req, res, next) => {
