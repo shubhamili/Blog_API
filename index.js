@@ -14,6 +14,7 @@ import http from "http";
 import { initSocket } from "./src/socket/index.js";
 import internalRoutes from './src/routes/internal.js'
 import googleRoute from "./src/routes/googleAuthRoute.js";
+import aiRouter from "./src/routes/aiRouter.js";
 
 
 
@@ -77,6 +78,7 @@ app.use("/api/user", userRouter)
 app.use("/api/post", postRouter)
 app.use("/internal", internalRoutes);
 app.use('/api/google', googleRoute)
+app.use('/api/ai', aiRouter)
 
 //error handle
 app.use((err, req, res, next) => {
