@@ -2,7 +2,6 @@ import { groq } from "../utils.js/groqClient.js";
 
 
 export const completion = async (req, res) => {
-
     try {
         const { text } = req.body;
 

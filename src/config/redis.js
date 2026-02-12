@@ -5,13 +5,9 @@ const redisClient = createClient({
 })
 
 
-redisClient.on("error", (err) => {
-    console.log
-})
-
 
 redisClient.on("error", (err) => {
-    console.err("redis errror")
+    console.err("redis errror :", err)
 })
 
 

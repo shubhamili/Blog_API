@@ -328,8 +328,8 @@ const updatePost = async (req, res, next) => {
             updateDoc.postPicture = null;
             updateDoc.postPicturePublicID = null;
 
+            // Delete the old image from Cloudinary
             if (post.postPicturePublicID) {
-                // Delete the old image from Cloudinary
                 console.log("Deleting old image from Cloudinary:", post.postPicturePublicID);
                 const deleted = await deleteImageFromCloudinary(post.postPicturePublicID);
                 if (!deleted) {
@@ -358,8 +358,6 @@ const deletePost = async (req, res, next) => {
     try {
         const { id } = req.params;
         const userID = req.user.id;
-
-
 
         const postToBeDeleted = await Post.findById(id);
 
@@ -496,6 +494,7 @@ const toggleLikePost = async (req, res, next) => {
                 error: "PostNotFoundError",
             });
         }
+
         //expensive ops will optimize it
         const Liked = post.likes.some(likeId => likeId.toString() === userId.toString());
         const authorId = post.author._id
@@ -632,11 +631,12 @@ const addComment = async (req, res, next) => {
     }
 };
 
-
+//why using this here because if we somehow try to find this usign simple queries this will be a very expensive oprration thts why we use aggregation pipeline here
 const totalPostbyEachUser = async (req, res, next) => {
     const PostCount = await Post.aggregate([
         {
             $group: { _id: "$author", totalPosts: { $sum: 1 } }
+            // for each autherId it will count all the post document and give the sum of it --- Group all documents by author field and count how many documents each author has. 
         },
         {
             $lookup: {
