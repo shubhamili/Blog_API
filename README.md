@@ -2,8 +2,16 @@
 # 🚀 Blog API – A Production‑Ready Social Platform Backend  
 **By Shubham Singh**
 
-This project represents a **complete, scalable, production-level backend system** that powers a modern blog and social‑interaction platform.  
-It is engineered with industry standards, secure backend patterns, real-world architectural decisions, and features modeled after platforms like **Medium, Instagram, Twitter**, and **Dev.to**.
+
+Blogify is a full-stack social blogging platform built using React and TypeScript on the frontend, and Node.js, Express, and MongoDB on the backend. It focuses on real-world authentication, scalability, and real-time system design.
+
+The application supports creating and managing posts, likes, comments, a follow system, and real-time notifications. Authentication is implemented using JWT with access and refresh tokens, along with Google login via Google Identity Services (OAuth 2.0, SPA-friendly flow).
+
+Real-time notifications are handled using Socket.io, with Redis used as a queue to process events asynchronously and prevent blocking under high load. Redis is also used for caching frequently accessed blog data with proper cache invalidation to improve performance.
+
+The platform includes an AI-powered caption generation feature implemented on the backend using the Groq API, allowing users to generate post captions. Media uploads are handled using Multer and Cloudinary, with image optimization and CDN delivery.
+
+Both the frontend and backend are containerized using Docker to ensure consistent development and deployment workflows.**Dev.to**.
 
 This README focuses on the **expertise, concepts, engineering depth, and professional-level backend practices** demonstrated while building this system.
 
