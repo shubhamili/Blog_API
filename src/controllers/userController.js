@@ -9,12 +9,13 @@ import { Post } from "../models/postModel.js";
 import { createNotificationSerice } from "../utils.js/notificationService.js";
 import { Notification } from "../models/notificationModel.js";
 import redisClient from "../config/redis.js";
+import mongoose from "mongoose";
 
 
 const registerUser = async (req, res) => {
     try {
-        const { userName, email, password, bio } = req.body;
-        const profilePicture = req.file ? req.file.path : null
+        const { userName, email, password } = req.body;
+        // const profilePicture = req.file ? req.file.path : null
 
         if ([userName, email, , password].some((field) => field?.trim() === "")) {
             return res.status(400).json({
@@ -34,65 +35,70 @@ const registerUser = async (req, res) => {
                 error: "UserExistsError",
             });
         }
-        let uploadedImageUrl = "";
-        if (profilePicture) {
-            cloudinaryUpload = await uploadOnCloudinary(profilePicture);
-            if (cloudinaryUpload) {
-                // If the upload is successful, you can access the URL and other details from the response
-                uploadedImageUrl = cloudinaryUpload.secure_url; // Use the secure URL for HTTPS
+        // let uploadedImageUrl = "";
+        // if (profilePicture) {
+        //     cloudinaryUpload = await uploadOnCloudinary(profilePicture);
+        //     if (cloudinaryUpload) {
+        //         // If the upload is successful, you can access the URL and other details from the response
+        //         uploadedImageUrl = cloudinaryUpload.secure_url; // Use the secure URL for HTTPS
 
-                return res.status(200).json({
-                    success: true,
-                    message: "file uploaded to Cloudinary",
-                });
-            } else {
-                return res.status(400).json({
-                    success: false,
-                    message: "Error uploading to Cloudinary or file not provided",
-                    data: null,
-                    error: "CloudinaryError",
-                });
-            }
-        }
-
-
-        const user = await User.create({
-            userName,
-            password,
-            email,
-            profilePicture: uploadedImageUrl,
-            bio,
-
-        })
+        //         return res.status(200).json({
+        //             success: true,
+        //             message: "file uploaded to Cloudinary",
+        //         });
+        //     } else {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: "Error uploading to Cloudinary or file not provided",
+        //             data: null,
+        //             error: "CloudinaryError",
+        //         });
+        //     }
+        // }
 
 
+        let createdUser;
 
-        const createdUser = await User.findById(user._id).select("-password")
+        const session = await mongoose.startSession();
+        session.startTransaction()
+        try {
+            console.log(' userName', userName,
+                password,
+                email)
 
+            createdUser = await User.create([{
+                userName,
+                password,
+                email,
+            }], { session })
 
-        if (createdUser) {
+            console.log("user", createdUser[0].email);
+
             const html = `
-                        <h1>Welcome to Pustakalay, ${userName}!</h1>
-                        <p>We’re excited to have you join our community.</p>
-                        <p>Start exploring, following other users, and sharing your own content!</p>
-                        `;
+                            <h1>Welcome to Pustakalay, ${userName}!</h1>
+                            <p>We’re excited to have you join our community.</p>
+                            <p>Start exploring, following other users, and sharing your own content!</p>
+                            `;
 
-            await sendEmail(user.email, 'Welcome to Pustakalay!', html);
-        }
+            await sendEmail(createdUser[0].email, 'Welcome to Pustakalay!', html);
+            // console.log("success", success);
 
+            await session.commitTransaction();
+            session.endSession();
 
-        if (!createdUser) {
-            return res.status(400).json({
-                success: false,
-                message: "User not created",
-                data: null,
-                error: "UserCreationError",
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+
+            return res.status(500).json({
+                message: "User creation failed",
+                error: error,
             });
         }
 
-        //jwt token
-        const refreshToken = generateRefreshToken(createdUser)
-        const accessToken = generateAccessToken(createdUser)
+
+        const refreshToken = generateRefreshToken(createdUser[0])
+        const accessToken = generateAccessToken(createdUser[0])
         if (!refreshToken || !accessToken) {
             return res.status(400).json({
                 success: false,
@@ -107,14 +113,21 @@ const registerUser = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
+        console.log({
+            id: createdUser[0]._id,
+            username: createdUser[0].userName,
+            email: createdUser[0].email,
+            profilePicture: createdUser[0].profilePicture,
+            accessToken: accessToken
+        })
+
         res.status(200).json({
             success: true,
             message: "user registered successful",
             user: {
-                id: user._id,
-                username: user.userName,
-                email: user.email,
-                profilePicture: createdUser.profilePicture,
+                id: createdUser[0]._id,
+                username: createdUser[0].userName,
+                email: createdUser[0].email,
                 accessToken: accessToken
             },
         });
@@ -592,15 +605,17 @@ const reqProfile = async (req, res) => {
 const getMyNotifications = async (req, res) => {
     try {
         const myId = req.user.id;
-        const myNotifications = await Notification
-            .find({ recipient: myId })
-            .populate("recipient", "userName")
+
+        const myNotifications = await Notification.find({
+            recipients: myId,
+            isRead: false
+        })
             .populate("sender", "userName")
-            .lean()
+            .lean();
 
         let notificationData = myNotifications.map((not) =>
-            `${not.recipient.userName} ${not.type} ${not.message}`
-        )
+            `${not.sender.userName} ${not.message}`
+        );
 
         console.log("my noftification =", notificationData);
         return res.status(200).json({
