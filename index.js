@@ -16,12 +16,8 @@ import internalRoutes from './src/routes/internal.js'
 import googleRoute from "./src/routes/googleAuthRoute.js";
 import aiRouter from "./src/routes/aiRouter.js";
 
-
-
 const app = express();
 const PORT = process.env.PORT;
-
-
 
 const server = http.createServer(app);
 
@@ -45,12 +41,9 @@ ConnectDB().then((req, res) => {
     console.error("Error connecting to MongoDB:", error);
 });
 
-
-
 server.listen(PORT, () => {
     console.log(`Server & Socket running on port http://localhost:${PORT}`);
 });
-
 
 app.get("/", (req, res) => {
     res.status(200).json({
@@ -64,7 +57,6 @@ app.get("/", (req, res) => {
         database: "MongoDB connected"
     });
 });
-
 
 app.use(cors({
     origin: [
@@ -94,4 +86,3 @@ app.use((err, req, res, next) => {
         data: null,
     });
 });
-

@@ -14,7 +14,7 @@ export const emitNotification = (req, res) => {
     if (!notification) return res.status(400).json({ ok: false, message: "No notification payload" });
 
     console.log("notification body: ", notification);
-    const recipientIds = notification.recipients
+    const recipientIds = notification.recipients;
     console.log("recipientIds", recipientIds);
     try {
         const io = getIO();

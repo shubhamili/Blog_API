@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+
+
 const userSchema = new mongoose.Schema(
     {
         userName: {
@@ -55,7 +57,6 @@ userSchema.pre("save", async function (next) {
     this.password = await bcrypt.hash(this.password, 8)
     next()
 })
-
 
 userSchema.methods.isPasswordCorrect =
     async function (password) {

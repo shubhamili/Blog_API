@@ -6,7 +6,7 @@ const redisClient = createClient({
 
 
 
-redisClient.on("error", (err) => {
+redisClient.on("error", (err ) => {
     console.err("redis errror :", err)
 })
 

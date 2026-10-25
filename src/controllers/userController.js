@@ -35,26 +35,27 @@ const registerUser = async (req, res) => {
                 error: "UserExistsError",
             });
         }
-        // let uploadedImageUrl = "";
-        // if (profilePicture) {
-        //     cloudinaryUpload = await uploadOnCloudinary(profilePicture);
-        //     if (cloudinaryUpload) {
-        //         // If the upload is successful, you can access the URL and other details from the response
-        //         uploadedImageUrl = cloudinaryUpload.secure_url; // Use the secure URL for HTTPS
 
-        //         return res.status(200).json({
-        //             success: true,
-        //             message: "file uploaded to Cloudinary",
-        //         });
-        //     } else {
-        //         return res.status(400).json({
-        //             success: false,
-        //             message: "Error uploading to Cloudinary or file not provided",
-        //             data: null,
-        //             error: "CloudinaryError",
-        //         });
-        //     }
-        // }
+        let uploadedImageUrl = "";
+        if (profilePicture) {
+            cloudinaryUpload = await uploadOnCloudinary(profilePicture);
+            if (cloudinaryUpload) {
+                // If the upload is successful, you can access the URL and other details from the response
+                uploadedImageUrl = cloudinaryUpload.secure_url; // Use the secure URL for HTTPS
+
+                return res.status(200).json({
+                    success: true,
+                    message: "file uploaded to Cloudinary",
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: "Error uploading to Cloudinary or file not provided",
+                    data: null,
+                    error: "CloudinaryError",
+                });
+            }
+        }
 
 
         let createdUser;
@@ -150,6 +151,7 @@ const LoginUser = async (req, res) => {
             error: "ValidationError",
         });
     }
+    
     const user = await User.findOne({ userName });
 
     if (!user) {
